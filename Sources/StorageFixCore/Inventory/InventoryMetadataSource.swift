@@ -53,10 +53,17 @@ public struct LocalInventoryMetadataSource: InventoryMetadataSource {
         for case let url as URL in enumerator {
             try Task.checkCancellation()
             do {
-                let descend = try autoreleasepool { try visit(metadata(at: url)) }
-                if !descend { enumerator.skipDescendants() }
+                let shouldPrune = try autoreleasepool {
+                    let item = try metadata(at: url)
+                    let descend = try visit(item)
+                    return item.isDirectory && !descend
+                }
+                if shouldPrune { enumerator.skipDescendants() }
             } catch is CancellationError { throw CancellationError() }
-            catch { issue(Self.issue(url, error: error)); enumerator.skipDescendants() }
+            catch {
+                issue(Self.issue(url, error: error))
+                if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true { enumerator.skipDescendants() }
+            }
         }
     }
 
