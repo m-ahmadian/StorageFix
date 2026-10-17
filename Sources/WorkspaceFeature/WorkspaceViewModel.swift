@@ -34,6 +34,7 @@ public final class WorkspaceViewModel: ObservableObject {
     @Published public private(set) var availableBytes: Int64?
     @Published public private(set) var capacityBytes: Int64?
     @Published public private(set) var activity: [ActivityEntry] = []
+    @Published public private(set) var hasExplored = false
     public let edition: DistributionMode
     public var supportsCleanup: Bool { edition == .direct }
     @Published public private(set) var includesDuplicateComparison: Bool
@@ -69,6 +70,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public var isBusy: Bool { reviewQueue?.isExecuting == true || isReviewing || cleanup.isLoading || duplicates.isLoading || files.isLoading || apps.isLoading || map.isLoading }
     public func select(_ section: WorkspaceSection) {
         guard !isReviewing, reviewQueue?.isExecuting != true, section != .cleanup || supportsCleanup else { return }
+        if [.map, .files, .duplicates].contains(section), files.hasScanned || latestReport != nil { hasExplored = true }
         selectedSection = section
     }
     public func refreshDisk() {
@@ -78,7 +80,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public func chooseReviewFolder(_ folder: URL) {
         guard !isBusy else { return }
         files.chooseFolder(folder); duplicates.chooseFolder(folder); map.chooseFolder(folder)
-        lastReviewDate = nil; latestReport = nil; reviewMessage = nil; completedSteps = 0
+        lastReviewDate = nil; latestReport = nil; reviewMessage = nil; completedSteps = 0; hasExplored = false
         refreshDisk()
     }
     public func review() async {

@@ -22,6 +22,7 @@ public struct QuickReviewView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.large) {
                 heading
                 introduction
+                ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select)
                 if vm.isReviewing { progress }
                 reviewOutcome
                 HStack {
