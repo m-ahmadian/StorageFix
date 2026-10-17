@@ -24,22 +24,31 @@ jobs:
           - edition: app-store
             flags: "-Xswiftc -DAPP_STORE"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Toolchain
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          swift --version
-          sw_vers
+          echo "::notice title=Toolchain::$(swift --version 2>&1 | head -1) on macOS $(sw_vers -productVersion)"
       - name: Build
-        run: swift build ${{ matrix.flags }} --scratch-path .build-ci
+        run: swift build ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee build.log
       - name: Test
         run: swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
       - name: Packaging verifier tests
         if: matrix.edition == 'app-store'
         run: python3 -m unittest discover -s Tests/PackagingTests -v
-      - name: Upload test log
+      - name: Summarize failures as annotations
+        if: failure()
+        run: |
+          encode() { python3 -c 'import sys; print(sys.stdin.read()[:60000].replace("%","%25").replace("\r","").replace("\n","%0A"))'; }
+          for log in build.log test.log; do
+            [ -f "$log" ] || continue
+            echo "::error title=$log errors::$(grep -E 'error:|✘|failed|Fatal|crash' "$log" | sort -u | head -150 | encode)"
+            echo "::warning title=$log tail::$(tail -40 "$log" | encode)"
+          done
+      - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: test-log-${{ matrix.edition }}
-          path: test.log
+          name: logs-${{ matrix.edition }}
+          path: "*.log"
+          if-no-files-found: ignore
