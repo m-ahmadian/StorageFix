@@ -52,3 +52,27 @@ jobs:
           name: logs-${{ matrix.edition }}
           path: "*.log"
           if-no-files-found: ignore
+
+  benchmark:
+    name: Opt-in performance baselines
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run generated-fixture benchmarks (release)
+        env:
+          STORAGEFIX_BENCHMARK: "1"
+          STORAGEFIX_BENCHMARK_OUTPUT: ${{ runner.temp }}/baseline.json
+          STORAGEFIX_SHAPES_OUTPUT: ${{ runner.temp }}/shapes.json
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift test -c release --scratch-path .build-bench --filter 'LocalPerformanceBaselineTests|ShapeBenchmarkTests'
+      - name: Publish results as annotations
+        if: always()
+        run: |
+          echo "::notice title=Runner::$(sysctl -n machdep.cpu.brand_string) · $(sysctl -n hw.ncpu) CPUs · $(( $(sysctl -n hw.memsize) / 1073741824 )) GiB · macOS $(sw_vers -productVersion)"
+          for f in baseline shapes; do
+            p="${{ runner.temp }}/$f.json"
+            [ -f "$p" ] && echo "::notice title=$f::$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))' "$p")"
+          done
