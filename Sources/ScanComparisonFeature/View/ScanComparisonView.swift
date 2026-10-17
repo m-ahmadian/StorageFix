@@ -33,6 +33,7 @@ public struct ScanComparisonView: View {
             Text(vm.comparisonSummary).font(.headline)
             if let comparison = vm.comparison {
                 ForEach(comparison.warnings, id: \.self) { Text($0).font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText) }
+                if !vm.folderChanges.isEmpty { FolderChangesView(viewModel: vm) }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
                         ForEach(comparison.items) { item in comparisonRow(item) }
@@ -48,7 +49,7 @@ public struct ScanComparisonView: View {
             }
         }
         .fileExporter(isPresented: $isExporting, document: TextExportDocument(text: vm.exportText ?? ""),
-                      contentType: .json, defaultFilename: "StorageFix Scan Snapshot.json", onCompletion: vm.finishedFileOperation)
+                      contentType: .json, defaultFilename: "StorageFix Scan Snapshot.json", onCompletion: { vm.finishedFileOperation($0) })
     }
     private func comparisonRow(_ item: ScanComparison.Item) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.small) {

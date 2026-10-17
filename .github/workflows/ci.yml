@@ -10,9 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash  # -eo pipefail, so piping through tee cannot hide a failure
+
 jobs:
   test:
     name: ${{ matrix.edition }} build and tests
+    permissions:
+      contents: write
     runs-on: macos-26
     timeout-minutes: 40
     strategy:
@@ -32,7 +38,16 @@ jobs:
       - name: Build
         run: swift build ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee build.log
       - name: Test
-        run: swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+        env:
+          STORAGEFIX_RENDER_DIRECTORY: ${{ github.workspace }}/renders
+          STORAGEFIX_STORE_SCREENSHOTS: ${{ matrix.edition == 'app-store' && format('{0}/store-screenshots', github.workspace) || '' }}
+        run: |
+          mkdir -p renders store-screenshots
+          [ -n "$STORAGEFIX_STORE_SCREENSHOTS" ] || unset STORAGEFIX_STORE_SCREENSHOTS
+          swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+          echo "::notice title=${{ matrix.edition }} tests::$(grep -E 'Test run with [0-9]+ tests? (in [0-9]+ suites? )?(passed|failed)' test.log | tail -1)"
+          echo "::notice title=${{ matrix.edition }} skipped::$(grep -cE 'Test .* skipped' test.log || true) skipped"
+          echo "::notice title=${{ matrix.edition }} renders::$(ls renders 2>/dev/null | wc -l | tr -d ' ') PNG renders" 
       - name: Packaging verifier tests
         if: matrix.edition == 'app-store'
         run: python3 -m unittest discover -s Tests/PackagingTests -v
@@ -45,6 +60,29 @@ jobs:
             echo "::error title=$log errors::$(grep -E 'error:|✘|failed|Fatal|crash' "$log" | sort -u | head -150 | encode)"
             echo "::warning title=$log tail::$(tail -40 "$log" | encode)"
           done
+      - name: Upload renders
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: renders-${{ matrix.edition }}
+          path: |
+            renders/*.png
+            store-screenshots/*.png
+          if-no-files-found: ignore
+      - name: Publish renders to a ci-renders branch
+        if: success() && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls renders/*.png >/dev/null 2>&1 || exit 0
+          out="$RUNNER_TEMP/renders-out"; rm -rf "$out"; mkdir -p "$out"
+          cp renders/*.png "$out/"; cp store-screenshots/*.png "$out/" 2>/dev/null || true
+          cd "$out"
+          git init -q -b main && git config user.name "storagefix-ci" && git config user.email "ci@users.noreply.github.com"
+          echo "Renders for ${GITHUB_SHA} (${{ matrix.edition }}, ${GITHUB_REF_NAME})" > README.md
+          git add -A && git commit -qm "Renders for ${GITHUB_SHA::7} (${{ matrix.edition }})"
+          git push -f -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-renders-${{ matrix.edition }}
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v5
@@ -55,7 +93,8 @@ jobs:
 
   benchmark:
     name: Opt-in performance baselines
-    if: github.event_name == 'workflow_dispatch'
+    # Manual run, or include [benchmark] in a pushed commit message.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[benchmark]'))
     runs-on: macos-26
     timeout-minutes: 60
     steps:

@@ -55,8 +55,8 @@ public struct StorageMapView: View {
 
     private var scanOptions: some View {
         HStack(spacing: DesignSystem.Spacing.medium) {
-            Toggle("Include hidden files", isOn: Binding(get: { vm.options.includesHiddenFiles }, set: vm.setHiddenFiles))
-            Toggle("Inspect package contents", isOn: Binding(get: { vm.options.includesPackageContents }, set: vm.setPackageContents))
+            Toggle("Include hidden files", isOn: Binding(get: { vm.options.includesHiddenFiles }, set: { vm.setHiddenFiles($0) }))
+            Toggle("Inspect package contents", isOn: Binding(get: { vm.options.includesPackageContents }, set: { vm.setPackageContents($0) }))
             Text("Read-only map options · apply on next scan").font(.caption)
         }.toggleStyle(.checkbox).disabled(vm.isLoading || vm.isQueueBusy)
     }
@@ -87,12 +87,12 @@ public struct StorageMapView: View {
                 Button("Quick Look", action: vm.previewSelection).disabled(!vm.canPreview).keyboardShortcut("y", modifiers: .command)
                 Button("Show in Finder", action: vm.revealSelection).disabled(!vm.canReveal)
             }
-            TextField("Filter this folder’s list", text: Binding(get: { vm.query }, set: vm.setQuery)).textFieldStyle(.roundedBorder)
+            TextField("Filter this folder’s list", text: Binding(get: { vm.query }, set: { vm.setQuery($0) })).textFieldStyle(.roundedBorder)
             HStack(spacing: DesignSystem.Spacing.small) {
-                Picker("Sort", selection: Binding(get: { vm.sort }, set: vm.setSort)) {
+                Picker("Sort", selection: Binding(get: { vm.sort }, set: { vm.setSort($0) })) {
                     ForEach(MapSort.allCases) { Text($0.rawValue).tag($0) }
                 }
-                Picker("Map style", selection: Binding(get: { vm.mapStyle }, set: vm.setMapStyle)) {
+                Picker("Map style", selection: Binding(get: { vm.mapStyle }, set: { vm.setMapStyle($0) })) {
                     ForEach(MapStyle.allCases) { Text($0.rawValue).tag($0) }
                 }.labelsHidden().pickerStyle(.segmented).frame(width: DesignSystem.Size.mapStylePickerWidth)
             }
@@ -140,9 +140,9 @@ public struct StorageMapView: View {
                 Button(item.name) { vm.selectItem(item) }.buttonStyle(.plain).font(.headline).lineLimit(1).help(item.path)
                     .accessibilityAddTraits(vm.selectedID == .item(item.path) ? .isSelected : [])
                     .accessibilityHint("Select for Quick Look or folder exploration")
-                ProgressView(value: Double(item.bytes), total: Double(max(1, vm.totalBytes)))
-                    .tint(DesignSystem.Colors.storageMapItem(at: index))
+                ShareBar(value: item.bytes, total: vm.totalBytes, color: DesignSystem.Colors.storageMapItem(at: index))
                     .frame(maxWidth: DesignSystem.Size.storageMapProgressWidth)
+                    .accessibilityElement()
                     .accessibilityLabel("Share of folder").accessibilityValue(vm.shareDescription(item.bytes))
                 Text("\(item.fileCount) \(item.fileCount == 1 ? "file" : "files") · \(vm.shareDescription(item.bytes)) of this folder")
                     .font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)

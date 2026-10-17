@@ -42,3 +42,17 @@ Peak resident memory for the entire test process was 216.63 MiB, down from 303 M
 Same-size files over 32 KiB are first split by a 16 KiB head plus 16 KiB tail SHA-256. Different samples prove different contents, so only colliding files are fully hashed; groups are still keyed by the full-content digest and Trash revalidation is unchanged. Regression tests cover files that differ only in the middle, at the head or tail, and small files that skip sampling.
 
 `ShapeBenchmarkTests` (opt-in, `STORAGEFIX_BENCHMARK=1`, output via `STORAGEFIX_SHAPES_OUTPUT`) adds a 60-level deep tree, a 50,000-file flat folder and a 200 × 10 duplicate-heavy set with three hashing runs. A manual `workflow_dispatch` CI job runs both benchmark suites on a GitHub macOS runner and prints JSON as annotations. No results are recorded yet; runner numbers will not substitute for the reference-Mac baseline.
+
+## GitHub runner baselines — October 17
+
+`RunnerBaseline-2026-10-17.json` and `RunnerShapes-2026-10-17.json` come from the opt-in CI job on a GitHub macOS runner (Apple M2 Pro virtual, 5 CPUs, 14 GiB, macOS 26.6.2, release build, warm caches, both suites in one test process). They are not the reference-Mac baseline.
+
+| Fixture | Scan median | Navigation p95 | Other |
+| --- | ---: | ---: | --- |
+| 10k flat | 1.60 s (first run 6.32 s) | 7.5 ms | cancellation 1.1 ms, first progress ≤ 100.1 ms |
+| 100k (100 × 1000) | 16.07 s | 0.9 ms | cancellation 1.1 ms |
+| 60-level deep, 1,200 files | 0.26 s | 0.04 ms per level | — |
+| 50k flat | 9.46 s | 35.8 ms (initial map build) | — |
+| 200 × 10 duplicates, 256 KiB | 0.30 s | — | full duplicate pass median 0.88 s |
+
+Navigation, first-progress and cancellation targets hold on the runner. Peak resident memory for the whole test process was 734 MiB with both suites (about 163,000 generated files) in one process, so the 250 MB target is **not** demonstrated here; the earlier 217 MiB figure covered only the 10k/100k suite on the reference Mac. Per-dataset memory profiling of the production app remains open.

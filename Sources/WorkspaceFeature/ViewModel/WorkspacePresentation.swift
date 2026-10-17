@@ -3,7 +3,8 @@ import StorageFixCore
 
 extension WorkspaceViewModel {
     func navigationTitle(_ section: WorkspaceSection) -> String {
-        section == .queue ? "Review Queue (\(reviewQueue?.snapshot.items.count ?? 0))" : section.rawValue
+        guard section == .queue, let count = reviewQueue?.snapshot.items.count, count > 0 else { return section.rawValue }
+        return "Review Queue (\(count))"
     }
     private var collapsedActivityCount: Int { 3 }
     var hasMoreActivity: Bool { activity.count > collapsedActivityCount }
@@ -18,6 +19,13 @@ extension WorkspaceViewModel {
         guard let capacityBytes, let availableBytes, capacityBytes > 0 else { return "—" }
         return (Double(max(0, min(availableBytes, capacityBytes))) / Double(capacityBytes)).formatted(.percent.precision(.fractionLength(0)))
     }
+    /// Share of the volume in use, 0...1; nil when capacity is unknown.
+    var usedFraction: Double? {
+        guard let capacityBytes, let availableBytes, capacityBytes > 0 else { return nil }
+        return 1 - Double(max(0, min(availableBytes, capacityBytes))) / Double(capacityBytes)
+    }
+    var usedPercentage: String { usedFraction.map { $0.formatted(.percent.precision(.fractionLength(0))) } ?? "—" }
+    var storagePressure: StoragePressure { StoragePressure(usedFraction: usedFraction) }
     func size(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
@@ -42,7 +50,7 @@ extension WorkspaceViewModel {
         case .choose:
             return files.needsFolder ? "Choose a folder, then run Quick Review. Scans only read metadata." : "Run Quick Review to measure this folder. Scans only read metadata."
         case .understand:
-            return "Open Storage Map or the report to see where space goes. Nothing is selected for you."
+            return "Your review is ready. Open Storage Map or the report to see where space goes. Nothing is selected for you."
         case .inspect:
             return "Inspect large files and duplicates, then add only the files you choose to the Review Queue."
         case .queue:
@@ -51,6 +59,13 @@ extension WorkspaceViewModel {
         case .verify:
             return "Run Quick Review again and compare with your baseline. Space returns only after you empty Trash in Finder."
         }
+    }
+    /// Shown on inspection screens while files wait in the queue.
+    var queuePillSummary: String? {
+        guard [.map, .duplicates, .files].contains(selectedSection), let queue = reviewQueue,
+              !queue.isExecuting, !queue.snapshot.items.isEmpty else { return nil }
+        let count = queue.snapshot.items.count
+        return "\(count) \(count == 1 ? "file" : "files") · \(size(queue.logicalBytes))"
     }
     var journeyActionTitle: String? {
         switch journey.current {

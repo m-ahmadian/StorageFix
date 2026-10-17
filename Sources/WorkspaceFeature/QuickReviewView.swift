@@ -22,7 +22,8 @@ public struct QuickReviewView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.large) {
                 heading
                 introduction
-                ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select)
+                ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select,
+                    secondaryTitle: vm.latestReport == nil ? nil : "View Report…", secondaryAction: { showsReport = true })
                 if vm.isReviewing { progress }
                 reviewOutcome
                 HStack {
@@ -64,7 +65,7 @@ public struct QuickReviewView: View {
                     .font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                 Toggle("Compare file contents for duplicates (optional)", isOn: Binding(
-                    get: { vm.includesDuplicateComparison }, set: vm.setDuplicateComparison))
+                    get: { vm.includesDuplicateComparison }, set: { vm.setDuplicateComparison($0) }))
                     .toggleStyle(.checkbox).disabled(vm.isBusy)
                 HStack(spacing: DesignSystem.Spacing.small) {
                     Button(vm.lastReviewDate == nil ? (vm.supportsCleanup ? "Start Review" : "Review Folder") : "Review Again", systemImage: "sparkles") {
@@ -100,14 +101,10 @@ public struct QuickReviewView: View {
         }.padding(DesignSystem.Spacing.medium).workspaceCard()
     }
 
+    /// Problems, cancellations and queue results stay visible; a clean review is summarised by the journey card.
     @ViewBuilder private var reviewOutcome: some View {
-        if let message = vm.reviewMessage {
-            HStack(spacing: DesignSystem.Spacing.medium) {
-                ReviewNotice(message, isError: vm.latestReport?.needsAttention == true)
-                if vm.latestReport != nil {
-                    Button("View Report…", systemImage: "doc.text") { showsReport = true }
-                }
-            }
+        if let message = vm.reviewMessage, vm.latestReport == nil || vm.latestReport?.needsAttention == true {
+            ReviewNotice(message, isError: vm.latestReport?.needsAttention == true)
         }
     }
 
@@ -155,23 +152,36 @@ public struct QuickReviewView: View {
             if let capacity = vm.capacityBytes, let free = vm.availableBytes, capacity > 0 {
                 Chart {
                     SectorMark(angle: .value("Used", max(0, capacity - free)), innerRadius: .ratio(DesignSystem.Chart.ringRatio), angularInset: DesignSystem.Chart.angularInset)
-                        .foregroundStyle(DesignSystem.Colors.accent)
+                        .foregroundStyle(pressureColor)
                     SectorMark(angle: .value("Available", min(capacity, free)), innerRadius: .ratio(DesignSystem.Chart.ringRatio), angularInset: DesignSystem.Chart.angularInset)
-                        .foregroundStyle(DesignSystem.Colors.accent.opacity(DesignSystem.Chart.availableOpacity))
+                        .foregroundStyle(DesignSystem.Colors.groupHeader)
                 }.frame(width: DesignSystem.Size.reviewChart, height: DesignSystem.Size.reviewChart)
                     .chartBackground { _ in
                         VStack(spacing: DesignSystem.Spacing.xSmall) {
-                            Text(vm.availablePercentage).font(.title.weight(.semibold))
-                            Text("available").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                            Text(vm.usedPercentage).font(.title.weight(.semibold))
+                            Text("used").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
                         }
                     }
-                    .accessibilityLabel("Disk space").accessibilityValue("\(vm.size(free)) available of \(vm.size(capacity))")
+                    .accessibilityLabel("Disk space")
+                    .accessibilityValue("\(vm.usedPercentage) used. \(vm.size(free)) available of \(vm.size(capacity)).\(vm.storagePressure.status.map { " \($0)." } ?? "")")
                 Text("\(vm.size(free)) available").font(.callout.weight(.semibold))
                 Text("of \(vm.size(capacity))").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                if let status = vm.storagePressure.status {
+                    Label(status, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.semibold))
+                        .foregroundStyle(pressureColor).accessibilityHidden(true)
+                }
             } else {
                 IconBadge("internaldrive")
                 Text("Disk space unavailable").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
             }
+        }
+    }
+
+    private var pressureColor: Color {
+        switch vm.storagePressure {
+        case .critical: DesignSystem.Colors.critical
+        case .tight: DesignSystem.Colors.warning
+        case .comfortable, .unknown: DesignSystem.Colors.accent
         }
     }
 
