@@ -19,9 +19,10 @@ public actor NativeCacheCleanupService: CleanupServiceProtocol {
         self.catalog = catalog; self.runningApplications = runningApplications; granted = !requiresGrant
     }
 
-    public var hasAccess: Bool { granted }
+    // Signatures match the protocol exactly so they, not the protocol's defaults, are always used.
+    public var hasAccess: Bool { get async { granted } }
 
-    public func grantAccess(to folder: URL) throws {
+    public func grantAccess(to folder: URL) async throws {
         guard folder.resolvingSymlinksInPath().standardizedFileURL.path == fileSystem.home.resolvingSymlinksInPath().path else {
             throw NativeCleanupError.wrongFolder(fileSystem.home.path)
         }

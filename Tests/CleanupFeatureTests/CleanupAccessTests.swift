@@ -7,8 +7,8 @@ actor AccessRequiringCleanup: CleanupServiceProtocol {
     nonisolated let requiredFolder: URL? = URL(fileURLWithPath: "/Users/example")
     private(set) var granted = false
     private(set) var scans = 0
-    var hasAccess: Bool { granted }
-    func grantAccess(to folder: URL) throws {
+    var hasAccess: Bool { get async { granted } }
+    func grantAccess(to folder: URL) async throws {
         guard folder.path == "/Users/example" else { throw NativeCleanupError.wrongFolder("/Users/example") }
         granted = true
     }

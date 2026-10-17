@@ -47,7 +47,7 @@ struct ReviewReportTests {
         #expect(vm.latestReport == nil)
     }
 
-    @Test func `Given an authorized Store folder, when reporting, then only folder scans appear`() async throws {
+    @Test func `Given an authorized Store folder without the Home grant, when reporting, then only folder scans appear`() async throws {
         let (vm, defaults, suite) = try workspace(service: FixtureFileService(), edition: .appStore)
         defer { defaults.removePersistentDomain(forName: suite) }
         await vm.review()
@@ -86,11 +86,11 @@ struct ReviewReportTests {
         #expect(vm.selectedSection == .apps)
     }
 
-    @Test func `Given a Store workspace, when requesting unsupported cleanup, then navigation stays in overview`() throws {
+    @Test func `Given a Store workspace, Cleanup opens and asks for the Home folder before scanning`() throws {
         let (vm, defaults, suite) = try workspace(service: FixtureFileService(), edition: .appStore)
         defer { defaults.removePersistentDomain(forName: suite) }
         vm.select(.cleanup)
-        #expect(vm.selectedSection == .overview)
+        #expect(vm.selectedSection == .cleanup && vm.cleanup.needsAccess && !vm.cleanup.hasScanned)
     }
 
     @Test func `Given several completed reviews, when expanding history, then all retained entries are accessible`() async {
@@ -108,7 +108,7 @@ struct ReviewReportTests {
         let suite = "StorageFixReport-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         let root = URL(fileURLWithPath: "/fixture")
-        let vm = WorkspaceViewModel(cleanup: CleanupViewModel(service: FixtureCleanupService()),
+        let vm = WorkspaceViewModel(cleanup: CleanupViewModel(service: edition == .appStore ? StoreAccessCleanup() as any CleanupServiceProtocol : FixtureCleanupService()),
             duplicates: DuplicateViewModel(service: FixtureDuplicateService(), scopeDescription: root.path),
             files: LargeFilesViewModel(scope: root, service: service), map: StorageMapViewModel(root: root, service: FixtureFileService()),
             apps: ApplicationsViewModel(service: FixtureApplicationService()), defaults: defaults, edition: edition, includesDuplicateComparison: true)

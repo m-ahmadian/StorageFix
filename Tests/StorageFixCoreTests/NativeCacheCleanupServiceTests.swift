@@ -76,4 +76,14 @@ struct NativeCacheCleanupServiceTests {
         #expect(report.categories.allSatisfy { $0.status == .scanned })
         #expect(FileManager.default.fileExists(atPath: home.appending(path: "Library/Caches/SomeApp/blob").path))
     }
+
+    @Test func `Through the protocol, the engine's own access methods are used, not the defaults`() async throws {
+        let (home, _) = try makeHome()
+        defer { try? FileManager.default.removeItem(at: home.deletingLastPathComponent()) }
+        let service: any CleanupServiceProtocol = NativeCacheCleanupService(home: home, requiresGrant: true, runningApplications: Running(ids: []))
+        #expect(await service.hasAccess == false)
+        await #expect(throws: NativeCleanupError.self) { try await service.grantAccess(to: home.deletingLastPathComponent()) }
+        try await service.grantAccess(to: home)
+        #expect(await service.hasAccess)
+    }
 }
