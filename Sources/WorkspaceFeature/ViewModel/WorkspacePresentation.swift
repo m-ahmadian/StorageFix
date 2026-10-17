@@ -59,6 +59,13 @@ extension WorkspaceViewModel {
             return "Run Quick Review again and compare with your baseline. Space returns only after you empty Trash in Finder."
         }
     }
+    /// Shown on inspection screens while files wait in the queue.
+    var queuePillSummary: String? {
+        guard [.map, .duplicates, .files].contains(selectedSection), let queue = reviewQueue,
+              !queue.isExecuting, !queue.snapshot.items.isEmpty else { return nil }
+        let count = queue.snapshot.items.count
+        return "\(count) \(count == 1 ? "file" : "files") · \(size(queue.logicalBytes))"
+    }
     var journeyActionTitle: String? {
         switch journey.current {
         case .understand: "Open Storage Map"

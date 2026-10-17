@@ -11,6 +11,7 @@ import SwiftUI
 
 public struct WorkspaceView: View {
     @ObservedObject private var vm: WorkspaceViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     public init(viewModel: WorkspaceViewModel) { vm = viewModel }
     public var body: some View {
         HStack(spacing: 0) {
@@ -28,6 +29,13 @@ public struct WorkspaceView: View {
                 case .safety: SafetyView()
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .bottomTrailing) {
+                if let summary = vm.queuePillSummary {
+                    QueuePill(summary: summary) { vm.select(.queue) }.padding(DesignSystem.Spacing.large)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: vm.queuePillSummary)
         }.background(DesignSystem.Colors.background).tint(DesignSystem.Colors.accent)
             .frame(minWidth: 1080, minHeight: 740)
     }
