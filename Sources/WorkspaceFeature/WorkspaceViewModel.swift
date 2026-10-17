@@ -38,9 +38,14 @@ public final class WorkspaceViewModel: ObservableObject {
     /// A queue run the person has moved on from (new folder or a new review cycle); the journey no longer waits on it.
     @Published private(set) var acknowledgedRunID: UUID?
     public let edition: DistributionMode
-    public var supportsCleanup: Bool { edition == .direct }
+    /// Cache cleanup exists in both editions; the sandboxed one first needs the Home folder granted.
+    public var supportsCleanup: Bool { true }
+    /// Caches join Quick Review once cleanup can measure them.
+    public var reviewsCaches: Bool { !cleanup.needsAccess }
+    /// Installed applications are measured automatically only outside the sandbox.
+    public var reviewsApplications: Bool { edition == .direct }
     @Published public private(set) var includesDuplicateComparison: Bool
-    public var reviewStageCount: Int { (supportsCleanup ? 3 : 1) + (includesDuplicateComparison ? 1 : 0) }
+    public var reviewStageCount: Int { 1 + (includesDuplicateComparison ? 1 : 0) + (reviewsApplications ? 1 : 0) + (reviewsCaches ? 1 : 0) }
     private let volumeService: (any VolumeInformationServiceProtocol)?
     private let defaults: UserDefaults
     private var subscriptions: Set<AnyCancellable> = []
@@ -76,6 +81,12 @@ public final class WorkspaceViewModel: ObservableObject {
         if [.map, .files, .duplicates].contains(section), files.hasScanned || latestReport != nil { hasExplored = true }
         selectedSection = section
     }
+    /// Opens Cleanup with the reviewed selection and asks for confirmation. Nothing is removed until confirmed there.
+    public func reviewAndClean() {
+        guard !isBusy, cleanup.hasScanned, cleanup.selectedBytes > 0 else { return }
+        select(.cleanup)
+        cleanup.requestCleanup()
+    }
     public func refreshDisk() {
         let volume = volumeService?.volume(at: files.scope) ?? files.inventoryResult?.volume
         availableBytes = volume?.availableBytes; capacityBytes = volume?.capacityBytes
@@ -83,6 +94,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public func chooseReviewFolder(_ folder: URL) {
         guard !isBusy else { return }
         files.chooseFolder(folder); duplicates.chooseFolder(folder); map.chooseFolder(folder)
+        Task { await cleanup.offerFolder(folder) }
         lastReviewDate = nil; latestReport = nil; reviewMessage = nil; completedSteps = 0; hasExplored = false
         acknowledgedRunID = reviewQueue?.snapshot.lastRun?.id
         refreshDisk()
@@ -115,17 +127,17 @@ public final class WorkspaceViewModel: ObservableObject {
                           bytes: self.duplicates.groups.flatMap(\.duplicates).reduce(0) { $0 + $1.bytes }, error: self.duplicates.errorMessage)
             }))
         }
-        if supportsCleanup {
-            operations += [
-                ("Measuring applications", { await self.apps.scan() }, {
-                    self.area(.apps, scope: self.apps.scopeDescription, count: self.apps.applications.count,
-                              bytes: self.apps.totalBytes, error: self.apps.errorMessage)
-                }),
-                ("Reviewing caches", { await self.cleanup.scan() }, {
-                    self.area(.cleanup, scope: "Allow-listed cache locations", count: self.cleanup.categories.count,
-                              bytes: self.cleanup.cleanableBytes, error: self.cleanup.errorMessage)
-                })
-            ]
+        if reviewsApplications {
+            operations.append(("Measuring applications", { await self.apps.scan() }, {
+                self.area(.apps, scope: self.apps.scopeDescription, count: self.apps.applications.count,
+                          bytes: self.apps.totalBytes, error: self.apps.errorMessage)
+            }))
+        }
+        if reviewsCaches {
+            operations.append(("Reviewing caches", { await self.cleanup.scan() }, {
+                self.area(.cleanup, scope: "Allow-listed cache locations", count: self.cleanup.categories.count,
+                          bytes: self.cleanup.cleanableBytes, error: self.cleanup.errorMessage)
+            }))
         }
         return operations
     }

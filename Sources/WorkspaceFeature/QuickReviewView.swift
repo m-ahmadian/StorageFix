@@ -22,6 +22,7 @@ public struct QuickReviewView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.large) {
                 heading
                 introduction
+                cleanNowCard
                 ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select,
                     secondaryTitle: vm.latestReport == nil ? nil : "View Report…", secondaryAction: { showsReport = true })
                 if vm.isReviewing { progress }
@@ -37,7 +38,7 @@ public struct QuickReviewView: View {
                     shortcut("Safety checklist", subtitle: "Review macOS settings", symbol: "checkmark.shield", section: .safety)
                 }
                 if !vm.activity.isEmpty { activity }
-                Text(vm.supportsCleanup ? "Scans never remove files. Cleanup and Trash actions always ask you to review or confirm." : "Scans never remove files. Selected files move to Trash only after your review.")
+                Text("Scans never remove files. Cache cleanup and Trash actions always ask you to review and confirm.")
                     .font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
             }.padding(DesignSystem.Spacing.xLarge)
         }
@@ -61,14 +62,14 @@ public struct QuickReviewView: View {
         HStack(spacing: DesignSystem.Spacing.large) {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
                 Text("Know what’s taking space.").font(.largeTitle.weight(.semibold))
-                Text(vm.supportsCleanup ? "Review the chosen folder, installed apps and supported caches. You choose what happens next." : "Review a folder you choose. Find duplicates and explore your files. You choose what happens next.")
+                Text(vm.reviewsApplications ? "Review the chosen folder, installed apps and rebuildable caches. You choose what happens next." : "Review a folder you choose, find duplicates and clean rebuildable caches. You choose what happens next.")
                     .font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                 Toggle("Compare file contents for duplicates (optional)", isOn: Binding(
                     get: { vm.includesDuplicateComparison }, set: { vm.setDuplicateComparison($0) }))
                     .toggleStyle(.checkbox).disabled(vm.isBusy)
                 HStack(spacing: DesignSystem.Spacing.small) {
-                    Button(vm.lastReviewDate == nil ? (vm.supportsCleanup ? "Start Review" : "Review Folder") : "Review Again", systemImage: "sparkles") {
+                    Button(vm.lastReviewDate == nil ? "Start Review" : "Review Again", systemImage: "sparkles") {
                         reviewTask = Task { await vm.review() }
                     }.buttonStyle(PrimaryButtonStyle()).disabled(!vm.canReview)
                     Button("Choose Folder…", systemImage: "folder") {
@@ -110,14 +111,37 @@ public struct QuickReviewView: View {
 
     private var reviewCards: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSystem.Spacing.medium) {
-            if vm.supportsCleanup {
-                reviewCard(title: "Cleanup", detail: "Rebuildable caches & optional data", value: vm.cleanup.hasScanned ? vm.cleanup.cleanableSizeDescription : "Ready to scan", symbol: "leaf", color: DesignSystem.Colors.accent, error: vm.cleanup.errorMessage, section: .cleanup)
-            } else {
-                reviewCard(title: "Storage map", detail: "Explore the chosen folder", value: vm.map.hasScanned ? "\(vm.map.items.count) items to explore" : "Follow the space", symbol: "chart.pie", color: DesignSystem.Colors.accent, error: vm.map.errorMessage, section: .map)
-            }
+            reviewCard(title: "Cleanup", detail: "Rebuildable caches & logs", value: cleanupCardValue, symbol: "leaf", color: DesignSystem.Colors.accent, error: vm.cleanup.needsAccess ? nil : vm.cleanup.errorMessage, section: .cleanup)
             reviewCard(title: "Duplicates", detail: vm.duplicates.scopeDescription, value: vm.duplicates.hasScanned ? "\(vm.duplicates.duplicateCount) extra \(vm.duplicates.duplicateCount == 1 ? "copy" : "copies")" : "Keep your favorites", symbol: "doc.on.doc", color: DesignSystem.Colors.lilac, error: vm.duplicates.errorMessage, section: .duplicates)
             reviewCard(title: "Large & old files", detail: "Filter by size, type & modified date", value: vm.fileInventoryDescription, symbol: "folder", color: DesignSystem.Colors.files, error: vm.files.errorMessage, section: .files)
-            reviewCard(title: "Applications", detail: vm.apps.permitsRemoval ? "App bundles, sorted by disk usage" : "Read-only inventory of a chosen folder", value: vm.apps.hasScanned ? "\(vm.apps.applications.count) installed \(vm.apps.applications.count == 1 ? "app" : "apps")" : (vm.apps.needsFolder ? "Choose an apps folder" : "A simpler collection"), symbol: "square.stack.3d.up", color: DesignSystem.Colors.amber, error: vm.apps.errorMessage, section: .apps)
+            if vm.reviewsApplications {
+                reviewCard(title: "Applications", detail: "App bundles, sorted by disk usage", value: vm.apps.hasScanned ? "\(vm.apps.applications.count) installed \(vm.apps.applications.count == 1 ? "app" : "apps")" : "A simpler collection", symbol: "square.stack.3d.up", color: DesignSystem.Colors.amber, error: vm.apps.errorMessage, section: .apps)
+            } else {
+                reviewCard(title: "Storage map", detail: "Explore the chosen folder", value: vm.map.hasScanned ? "\(vm.map.items.count) items to explore" : "Follow the space", symbol: "chart.pie", color: DesignSystem.Colors.amber, error: vm.map.errorMessage, section: .map)
+            }
+        }
+    }
+
+    private var cleanupCardValue: String {
+        if vm.cleanup.needsAccess { return "Allow cache cleanup" }
+        return vm.cleanup.hasScanned ? "\(vm.cleanup.cleanableSizeDescription) to clean" : "Ready to scan"
+    }
+
+    /// One click from a finished review to the cleanup confirmation sheet.
+    @ViewBuilder private var cleanNowCard: some View {
+        if vm.cleanup.hasScanned, vm.cleanup.selectedBytes > 0, !vm.isBusy {
+            HStack(spacing: DesignSystem.Spacing.medium) {
+                IconBadge("leaf", color: DesignSystem.Colors.accent)
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
+                    Text("\(vm.cleanup.selectedSizeDescription) of caches ready to clean").font(.title3.weight(.semibold))
+                    Text("Recommended categories are preselected. You see every folder and warning before anything is deleted.")
+                        .font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                }
+                Spacer()
+                Button("Review & Clean", systemImage: "sparkles") { vm.reviewAndClean() }.buttonStyle(PrimaryButtonStyle())
+            }
+            .padding(DesignSystem.Spacing.large).workspaceCard()
+            .accessibilityElement(children: .combine)
         }
     }
 

@@ -13,6 +13,7 @@ import WorkspaceFeature
 @MainActor enum WorkspaceAssembly {
     static func make(scriptURL: URL) -> WorkspaceViewModel {
         let home = FileManager.default.homeDirectoryForCurrentUser
+        let realHome = UserHome.real
         let downloads = home.appending(path: "Downloads").resolvingSymlinksInPath()
         let store = DistributionMode.current == .appStore
         let source = LocalInventoryMetadataSource()
@@ -26,7 +27,9 @@ import WorkspaceFeature
         let queue = ReviewQueue(policy: policy, operations: ReviewFileOperations(policy: policy), volumes: volumes)
         let applications = store ? [] : [URL(fileURLWithPath: "/Applications"), home.appending(path: "Applications")]
         return WorkspaceViewModel(
-            cleanup: CleanupViewModel(service: ScriptCleanupService(scriptURL: scriptURL)),
+            cleanup: CleanupViewModel(service: store
+                ? NativeCacheCleanupService(home: realHome, requiresGrant: true) as any CleanupServiceProtocol
+                : ScriptCleanupService(scriptURL: scriptURL)),
             duplicates: DuplicateViewModel(service: FileSystemDuplicateService(roots: [downloads]),
                 scopeDescription: store ? "Choose a folder" : downloads.path, requiresFolderSelection: store, queue: queue, presenter: presenter),
             files: LargeFilesViewModel(scope: downloads, service: FileBrowserService(inventoryService: inventory), requiresFolderSelection: store, queue: queue),
