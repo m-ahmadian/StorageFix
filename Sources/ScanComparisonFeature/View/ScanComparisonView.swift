@@ -33,6 +33,7 @@ public struct ScanComparisonView: View {
             Text(vm.comparisonSummary).font(.headline)
             if let comparison = vm.comparison {
                 ForEach(comparison.warnings, id: \.self) { Text($0).font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText) }
+                if !vm.folderChanges.isEmpty { FolderChangesView(viewModel: vm) }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
                         ForEach(comparison.items) { item in comparisonRow(item) }
