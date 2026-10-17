@@ -54,6 +54,7 @@ public enum FolderPicker {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
         panel.prompt = "Choose Folder"
+        panel.message = "Tip: choose your Home folder to review Desktop, Documents and Downloads together. StorageFix does not keep access after you quit."
         guard panel.runModal() == .OK, let folder = panel.url else { return nil }
         guard let access else { return nil }
         access.retain(folder)
