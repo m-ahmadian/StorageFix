@@ -13,7 +13,7 @@ struct FixedVolume: VolumeInformationServiceProtocol {
 }
 
 @MainActor struct WorkspacePolishTests {
-    @Test(arguments: [(500, StoragePressure.comfortable), (140, .tight), (30, .critical)])
+    @Test(arguments: zip([Int64(500), 140, 30], [StoragePressure.comfortable, .tight, .critical]))
     func `The capacity ring reports used share and pressure from free space`(available: Int64, expected: StoragePressure) {
         let vm = fixtureWorkspace(volumeService: FixedVolume(capacity: 1_000, available: available))
         vm.refreshDisk()
