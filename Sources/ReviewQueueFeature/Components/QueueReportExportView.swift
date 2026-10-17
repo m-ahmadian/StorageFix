@@ -14,11 +14,11 @@ struct QueueReportExportView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
             Text("Export operation results").font(.title2.weight(.semibold))
-            Picker("Format", selection: Binding(get: { viewModel.reportFormat }, set: viewModel.setReportFormat)) {
+            Picker("Format", selection: Binding(get: { viewModel.reportFormat }, set: { viewModel.setReportFormat($0) })) {
                 ForEach(QueueReportFormat.allCases) { Text($0.rawValue).tag($0) }
             }.disabled(viewModel.isPreparingReport)
             Toggle("Include full paths and original error details", isOn: Binding(
-                get: { viewModel.reportIncludesPaths }, set: viewModel.setReportIncludesPaths)).disabled(viewModel.isPreparingReport)
+                get: { viewModel.reportIncludesPaths }, set: { viewModel.setReportIncludesPaths($0) })).disabled(viewModel.isPreparingReport)
             Text("Paths and identifying errors are omitted by default. Review this preview before saving or sharing.")
                 .font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
             Button("Generate Preview") { preparation = Task { await viewModel.prepareReport() } }.disabled(viewModel.isPreparingReport)
@@ -35,6 +35,6 @@ struct QueueReportExportView: View {
         .onDisappear { preparation?.cancel(); viewModel.clearReport() }
         .fileExporter(isPresented: $isSaving, document: TextExportDocument(text: viewModel.reportDocument?.text ?? ""),
             contentType: contentType, defaultFilename: "StorageFix Queue Results.\(viewModel.reportDocument?.format.fileExtension ?? "txt")",
-            onCompletion: viewModel.finishedExport)
+            onCompletion: { viewModel.finishedExport($0) })
     }
 }

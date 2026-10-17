@@ -49,7 +49,7 @@ public struct ScanComparisonView: View {
             }
         }
         .fileExporter(isPresented: $isExporting, document: TextExportDocument(text: vm.exportText ?? ""),
-                      contentType: .json, defaultFilename: "StorageFix Scan Snapshot.json", onCompletion: vm.finishedFileOperation)
+                      contentType: .json, defaultFilename: "StorageFix Scan Snapshot.json", onCompletion: { vm.finishedFileOperation($0) })
     }
     private func comparisonRow(_ item: ScanComparison.Item) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.small) {

@@ -3,28 +3,24 @@ name: Toolchain probe
 on:
   push:
     branches: ["claude/**"]
-    paths: [".github/workflows/toolchain-probe.yml"]
+    paths: [".github/workflows/toolchain-probe.yml", "Sources/**"]
 
 jobs:
-  bisect:
+  build:
     runs-on: macos-26
-    timeout-minutes: 50
+    timeout-minutes: 30
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Build each commit
+      - name: Build and list every crashing or failing file
         run: |
-          for c in 66bd7ce c6b4c9e 817832c 1865760 3d8eae6 9119948; do
-            git checkout -q "$c"
-            if swift build --scratch-path ".build-$c" > build.txt 2>&1; then r=success
-            else
-              f=$(grep -m1 -oE 'primary-file [^ ]+' build.txt | sed 's#.*/Sources/##')
-              m=$(grep -m1 -E 'error:|note:' build.txt | cut -c1-160)
-              r="failed in ${f:-unknown}: $m"
-            fi
-            echo "::notice title=$c::$r"
-          done
+          if swift build -Xswiftc -continue-building-after-errors --scratch-path .build-probe > build.txt 2>&1; then
+            echo "::notice title=build::success"
+          else
+            files=$(grep -oE 'primary-file [^ ]+' build.txt | sed 's#.*/Sources/##' | sort -u | tr '\n' ' ')
+            errs=$(grep -E '^/.*error:' build.txt | sed 's#.*/Sources/##' | sort -u | head -20 | python3 -c 'import sys; print(sys.stdin.read().replace("%","%25").replace("\n","%0A"))')
+            echo "::error title=crashing files::${files:-none}"
+            echo "::error title=errors::${errs:-none}"
+          fi
