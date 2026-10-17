@@ -6,19 +6,25 @@ on:
     paths: [".github/workflows/toolchain-probe.yml"]
 
 jobs:
-  probe:
+  bisect:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 50
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
-      - name: Build every installed Xcode
+        with:
+          fetch-depth: 0
+      - name: Build each commit
         run: |
-          for x in $(ls -d /Applications/Xcode*.app | sort -V); do
-            sudo xcode-select -s "$x"
-            v=$(swift --version 2>&1 | head -1 | sed 's/.*Swift version \([0-9.]*\).*/\1/')
-            if swift build --scratch-path ".build-$(basename "$x" .app)" > build.txt 2>&1; then r=success; else r="failed: $(grep -m1 -E 'error:' build.txt | cut -c1-200)"; fi
-            echo "::notice title=$(basename "$x")::Swift $v → $r"
+          for c in 66bd7ce c6b4c9e 817832c 1865760 3d8eae6 9119948; do
+            git checkout -q "$c"
+            if swift build --scratch-path ".build-$c" > build.txt 2>&1; then r=success
+            else
+              f=$(grep -m1 -oE 'primary-file [^ ]+' build.txt | sed 's#.*/Sources/##')
+              m=$(grep -m1 -E 'error:|note:' build.txt | cut -c1-160)
+              r="failed in ${f:-unknown}: $m"
+            fi
+            echo "::notice title=$c::$r"
           done
