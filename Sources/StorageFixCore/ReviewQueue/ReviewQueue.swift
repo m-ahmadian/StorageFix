@@ -8,6 +8,8 @@ import Foundation
     let policy: any ReviewFilePolicyProtocol
     let operations: any ReviewFileOperationsProtocol
     let itemLimit: Int
+    let freeSpaceProbe: FreeSpaceProbe?
+    var measurementRoot: URL?
     var pathIndex = QueuePathIndex()
     var entries: [String: ReviewQueueItem] = [:]
     var registrations: [ReviewOrigin: QueueRegistration] = [:]
@@ -15,8 +17,9 @@ import Foundation
     var frozenProtections: [ReviewDuplicateProtection.ID: ReviewDuplicateProtection] = [:]
 
     public init(policy: any ReviewFilePolicyProtocol, operations: any ReviewFileOperationsProtocol,
-                itemLimit: Int = ReviewQueue.maximumItemCount) {
+                itemLimit: Int = ReviewQueue.maximumItemCount, volumes: (any VolumeInformationServiceProtocol)? = nil) {
         self.policy = policy; self.operations = operations; self.itemLimit = max(1, itemLimit)
+        freeSpaceProbe = volumes.map { FreeSpaceProbe(volumes: $0) }
     }
 
     public func registerInventory(_ scan: InventoryScan, origin: ReviewOrigin) {

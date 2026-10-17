@@ -52,10 +52,15 @@ public struct ReviewQueueRun: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let date: Date
     public let outcomes: [ReviewQueueOutcome]
-    public init(id: UUID = UUID(), date: Date = Date(), outcomes: [ReviewQueueOutcome]) {
-        self.id = id; self.date = date; self.outcomes = outcomes
+    /// Observed volume free space; nil when no volume service was available.
+    public let freeSpace: FreeSpaceMeasurement?
+    public init(id: UUID = UUID(), date: Date = Date(), outcomes: [ReviewQueueOutcome], freeSpace: FreeSpaceMeasurement? = nil) {
+        self.id = id; self.date = date; self.outcomes = outcomes; self.freeSpace = freeSpace
     }
     public var movedCount: Int { outcomes.filter { $0.status == .moved }.count }
+    func replacingFreeSpace(_ value: FreeSpaceMeasurement?) -> ReviewQueueRun {
+        ReviewQueueRun(id: id, date: date, outcomes: outcomes, freeSpace: value)
+    }
 }
 
 public struct ReviewQueueSnapshot: Equatable, Sendable {

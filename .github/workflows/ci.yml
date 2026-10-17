@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.edition }} build and tests
+    runs-on: macos-26
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: direct
+            flags: ""
+          - edition: app-store
+            flags: "-Xswiftc -DAPP_STORE"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "::notice title=Toolchain::$(swift --version 2>&1 | head -1) on macOS $(sw_vers -productVersion)"
+      - name: Build
+        run: swift build ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee build.log
+      - name: Test
+        run: swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+      - name: Packaging verifier tests
+        if: matrix.edition == 'app-store'
+        run: python3 -m unittest discover -s Tests/PackagingTests -v
+      - name: Summarize failures as annotations
+        if: failure()
+        run: |
+          encode() { python3 -c 'import sys; print(sys.stdin.read()[:60000].replace("%","%25").replace("\r","").replace("\n","%0A"))'; }
+          for log in build.log test.log; do
+            [ -f "$log" ] || continue
+            echo "::error title=$log errors::$(grep -E 'error:|✘|failed|Fatal|crash' "$log" | sort -u | head -150 | encode)"
+            echo "::warning title=$log tail::$(tail -40 "$log" | encode)"
+          done
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: logs-${{ matrix.edition }}
+          path: "*.log"
+          if-no-files-found: ignore
+
+  benchmark:
+    name: Opt-in performance baselines
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run generated-fixture benchmarks (release)
+        env:
+          STORAGEFIX_BENCHMARK: "1"
+          STORAGEFIX_BENCHMARK_OUTPUT: ${{ runner.temp }}/baseline.json
+          STORAGEFIX_SHAPES_OUTPUT: ${{ runner.temp }}/shapes.json
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift test -c release --scratch-path .build-bench --filter 'LocalPerformanceBaselineTests|ShapeBenchmarkTests'
+      - name: Publish results as annotations
+        if: always()
+        run: |
+          echo "::notice title=Runner::$(sysctl -n machdep.cpu.brand_string) · $(sysctl -n hw.ncpu) CPUs · $(( $(sysctl -n hw.memsize) / 1073741824 )) GiB · macOS $(sw_vers -productVersion)"
+          for f in baseline shapes; do
+            p="${{ runner.temp }}/$f.json"
+            [ -f "$p" ] && echo "::notice title=$f::$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))' "$p")"
+          done

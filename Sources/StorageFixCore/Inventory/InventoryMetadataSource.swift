@@ -69,9 +69,10 @@ public struct LocalInventoryMetadataSource: InventoryMetadataSource {
 
     public func volume(at root: URL) -> InventoryVolume? {
         guard let values = try? root.resourceValues(forKeys: [.volumeNameKey, .volumeTotalCapacityKey,
-            .volumeAvailableCapacityKey, .volumeIsReadOnlyKey]) else { return nil }
+            .volumeAvailableCapacityKey, .volumeIsReadOnlyKey, .volumeUUIDStringKey]) else { return nil }
         return InventoryVolume(name: values.volumeName, capacityBytes: values.volumeTotalCapacity.map(Int64.init),
-            availableBytes: values.volumeAvailableCapacity.map(Int64.init), isReadOnly: values.volumeIsReadOnly)
+            availableBytes: values.volumeAvailableCapacity.map(Int64.init), isReadOnly: values.volumeIsReadOnly,
+            identifier: values.volumeUUIDString)
     }
 
     private func metadata(at url: URL) throws -> InventoryMetadata {

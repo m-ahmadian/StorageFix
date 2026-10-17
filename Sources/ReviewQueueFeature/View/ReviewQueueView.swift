@@ -68,6 +68,14 @@ public struct ReviewQueueView: View {
             LazyVStack(alignment: .leading, spacing: DesignSystem.Spacing.small) {
                 Text("Last operation · \(run.date.formatted())").font(.headline)
                 Text(summary).font(.callout)
+                if let freeSpace = vm.freeSpaceDescription {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(freeSpace).font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
+                        Spacer()
+                        Button("Measure Again", action: vm.remeasureFreeSpace).disabled(!vm.canRemeasureFreeSpace)
+                            .accessibilityHint("Reads the volume's current free space. Does not change files.")
+                    }
+                }
                 ForEach(run.outcomes) { outcome in
                     VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
                         Text("\(vm.status(outcome)) · \(outcome.path)").font(.callout).textSelection(.enabled)
