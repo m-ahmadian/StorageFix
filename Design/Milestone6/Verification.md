@@ -36,3 +36,9 @@ Remaining: move first-visit projection work away from the main actor or pre-inde
 | Cancellation acknowledgement | 0.63 ms | 0.62 ms |
 
 Peak resident memory for the entire test process was 216.63 MiB, down from 303 MiB. Both the first/repeated navigation samples and the process-memory target now pass on these local fixtures. The new service timing includes background index preparation; earlier `metadataMilliseconds` figures did not. These are still ordinary-background-activity measurements; no separate enumeration/index-duration or production-app allocation claim is made. Physical external/cloud volumes, deep/large-flat/duplicate-heavy cases, hashing, controlled repeats and distribution-signed runtime validation remain open. The earlier “first uncached visit remains slow” and memory failure describe the previous cache-only implementation.
+
+## Duplicate pre-filter and additional fixtures — October 17
+
+Same-size files over 32 KiB are first split by a 16 KiB head plus 16 KiB tail SHA-256. Different samples prove different contents, so only colliding files are fully hashed; groups are still keyed by the full-content digest and Trash revalidation is unchanged. Regression tests cover files that differ only in the middle, at the head or tail, and small files that skip sampling.
+
+`ShapeBenchmarkTests` (opt-in, `STORAGEFIX_BENCHMARK=1`, output via `STORAGEFIX_SHAPES_OUTPUT`) adds a 60-level deep tree, a 50,000-file flat folder and a 200 × 10 duplicate-heavy set with three hashing runs. A manual `workflow_dispatch` CI job runs both benchmark suites on a GitHub macOS runner and prints JSON as annotations. No results are recorded yet; runner numbers will not substitute for the reference-Mac baseline.

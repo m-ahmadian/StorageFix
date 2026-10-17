@@ -94,8 +94,8 @@ Completion gate: targets pass or are explicitly revised with evidence; no main-t
 | 2. Scan engine/coverage | Implemented; environment checks pending | `Design/Milestone2/Verification.md`; local APFS/fixtures pass; physical external/cloud-provider tests pending |
 | 3. Visual exploration | Implementation delivered; validation pending | `Design/Milestone3/Verification.md`; treemap/ring/sunburst, linked selection and preview routing; usability/VoiceOver/native sandbox preview pending |
 | 4. Shared review queue | Implementation delivered; sandbox validation pending | `Design/Milestone4/Verification.md`; cross-feature policy, immutable confirmation, per-item outcomes; real disposable native Trash/restore passed |
-| 5. Comparison/reports | Implemented slices; validation open | `Design/Milestone5/Verification.md`; snapshots/comparison, duplicate previews and hints, redacted text/JSON/CSV outcomes; free-space measurement and guided journey validation pending |
-| 6. Performance/resilience | Local navigation/memory targets met; validation open | `Design/Milestone6/Verification.md`; off-main prepared hierarchy, first/repeat navigation under target and 217 MiB test-process peak on local fixtures; broader datasets, production profiling and environment tests pending |
+| 5. Comparison/reports | Implemented; validation open | `Design/Milestone5/Verification.md`; snapshots/comparison, duplicate previews and hints, redacted text/JSON/CSV outcomes, measured before/after volume free space, guided five-step journey; representative-user journey validation pending |
+| 6. Performance/resilience | Local navigation/memory targets met; validation open | `Design/Milestone6/Verification.md`; off-main prepared hierarchy, first/repeat navigation under target and 217 MiB test-process peak on local fixtures; head/tail duplicate pre-filter and deep/large-flat/duplicate-heavy opt-in fixtures added; recorded runs, production profiling and environment tests pending |
 | 7. Beta/release decision | Planned | All previous gates and publisher setup required |
 
 References:
