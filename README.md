@@ -2,6 +2,8 @@
 
 A native macOS workspace for reviewing storage before making changes.
 
+Private source repository: [m-ahmadian/StorageFix](https://github.com/m-ahmadian/StorageFix). The initial app release will be free. Contribution and architecture rules are in [AGENTS.md](AGENTS.md).
+
 Active development follows [PRODUCT-ROADMAP.md](PRODUCT-ROADMAP.md): staged product work and beta validation precede publication.
 Requires macOS 14 or later.
 
