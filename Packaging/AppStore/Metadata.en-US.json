@@ -1,0 +1,19 @@
+{
+  "locale": "en-US",
+  "name": "StorageFix",
+  "subtitle": "Review files. Reclaim clarity.",
+  "promotionalText": "Understand your folders before making changes. Find duplicate copies, review large files, explore storage and export a clear report—all locally on your Mac.",
+  "keywords": "storage,duplicate,files,folders,disk,organize,space,review,large,report,local,privacy",
+  "description": "Make room with a clearer picture of your files.\n\nStorageFix helps you review folders you choose, understand where space is going, and decide what to keep. Scans never delete anything.\n\nREVIEW YOUR FOLDERS\nQuick Review inventories files and compares duplicate contents in your selected folder. Open a dated report with each scan’s scope, counts, sizes and any errors. Export a text snapshot to a location you choose.\n\nCOMPARE DUPLICATE COPIES\nCompare file paths, choose the copy to keep, and explicitly select extra copies for Trash. Changed files require a fresh review before removal.\n\nFIND LARGE AND OLD FILES\nFilter by file size, type, name, path and last-modified date. Selections remain explicit when you change filters, and the confirmation sheet lists every selected file.\n\nEXPLORE YOUR STORAGE\nUse a folder chart and ranked list to explore your scanned inventory. Drill into folders and navigate back without rescanning.\n\nKEEP CONTROL\nThe Mac App Store edition accesses folders you choose. Access lasts for the session; choose again after relaunch. File removal requires review and moves selected files to Finder Trash. Space is freed when you empty Trash yourself.\n\nLOCAL BY DESIGN\nNo account, advertising, tracking, analytics or file uploads. Scan data stays on your Mac. Recent activity and checklist preferences are stored locally and can be cleared in the app.\n\nAlso includes a read-only application inventory and a personal checklist linking to macOS settings. The checklist does not inspect security configuration or detect malware.\n\nRequires macOS 14 or later. Supports Apple silicon and Intel Macs. This edition does not clean system caches or uninstall applications. Inventory sizes are logical file sizes; overlapping inventories are not a combined estimate of recoverable space.",
+  "whatsNew": "A clearer Quick Review dashboard, dated review reports with text export, more readable scan notices, stable file counts and expandable recent activity.",
+  "bundleIdentifier": "com.mehrdad.storagefix",
+  "version": "3.1",
+  "build": "12",
+  "category": "Utilities",
+  "supportURL": null,
+  "privacyPolicyURL": null,
+  "copyright": null,
+  "reviewContact": null,
+  "pricingAndAvailability": null,
+  "notes": "Draft for owner review. Confirm app name availability and that version/build are unused in App Store Connect. Fill null fields before submission. Screenshots are native Store interface renders with synthetic sample content; approve them against the signed release."
+}

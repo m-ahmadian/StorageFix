@@ -1,0 +1,37 @@
+StorageFix 3.1 — Sandboxed Store Edition (local test build)
+Requires macOS 14 or later. Apple Silicon and Intel included.
+
+1. Drag StorageFix into Applications and launch it.
+2. Choose a folder in Quick Review. Review stays disabled until you choose.
+   A review scans files and duplicates, and shares results with Storage Map.
+3. Duplicates: compare full paths, choose a copy to keep, select extra copies,
+   then confirm Trash. At least one copy stays; changed files require a rescan.
+4. Large & old files: size/type/modified-date/path filters, explicit selections,
+   then Review Selected. The sheet includes selections hidden by filters.
+5. Storage map: Explore, Back, Root, Show in Finder. Read-only exploration.
+6. Applications: Choose Folder, select Applications and Scan. Inventory is
+   read-only in this edition; Show opens Finder. App Store Updates opens Apple’s
+   App Store. This edition does not uninstall apps or clean system caches.
+7. Safety checklist records your own review. Open Settings, search for the
+   setting indicated, then mark Reviewed. No security settings are modified.
+8. After a completed Quick Review, View Report shows each area's scope, counts,
+   sizes and errors. Export Report saves a dated text snapshot where you choose.
+   Figures overlap and are not a total of reclaimable space.
+9. Privacy Policy is available from Help. Clear History removes local activity.
+
+Access is limited to folders you choose. Choose again after relaunch.
+No administrator privileges, Full Disk Access, network access or background
+agent is requested. A denied/inaccessible folder reports an error.
+
+Testing Samples
+Copy the DMG’s Testing Samples into Downloads, then choose the copied root.
+Exports contains two identical 12 MB files; Projects contains a unique third.
+For Large & old files, select 10 MB+, Other and Any age. Three files appear.
+Explore Exports on the map and Back. Review a selection and Cancel; if you
+confirm on these disposable samples, restore the file from Finder Trash.
+Scanned sizes exclude hidden files, bundles, empty files, symlinks and hard links.
+APFS sharing can make logical file sizes differ from physical disk usage.
+
+This local sandbox test app is ad hoc signed and has not been App Store reviewed.
+It cannot be submitted without the publisher's distribution signing identity,
+App Store Connect metadata and a publicly hosted privacy policy/support contact.

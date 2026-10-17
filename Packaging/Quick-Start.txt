@@ -1,0 +1,44 @@
+StorageFix 3.1 — Quick Start
+Requires macOS 14 or later. Apple Silicon and Intel included.
+
+1. Open the DMG, drag StorageFix into Applications, then launch it.
+2. Quick Review: choose a folder, then Review My Mac. Four read-only scans
+   summarize cleanup, duplicates, large files and applications. Open any card
+   to inspect results. Recent activity records completed reviews and actions; Clear History removes it.
+3. Cleanup: review allow-listed caches and warnings, quit affected apps,
+   select categories and confirm. Cache cleanup permanently removes files.
+4. Duplicates: copies start unselected. Compare paths, Show in Finder or Keep
+   This, select extra copies and review before moving them to Trash.
+5. Large & old files: filter by size, type, name/path and modified date.
+   Select files, review ALL selected paths (including hidden-by-filter items),
+   then move to Trash. Changed files require a new scan.
+6. Storage map: scan a folder, Explore a subfolder, Back or Root to navigate.
+   Show opens Finder. Sizes exclude hidden files, app bundles and hard links;
+   APFS sharing can make physical usage differ from scanned logical sizes.
+7. Applications: browse apps by size, search, Show in Finder or review removal.
+   Only the selected app bundle moves to Trash. Documents, preferences and
+   support files stay. System apps and running apps cannot be removed here.
+   App Store Updates opens the App Store; updates are managed there.
+8. Safety checklist: open macOS settings and mark your own review steps.
+   This is a personal checklist, not a malware or security scan.
+
+Test with disposable files
+Copy Testing Samples from the DMG to Downloads first. The mounted DMG is
+read-only. Exports contains two identical 12 MB files; Projects contains one
+unique 12 MB file. Choose the copied root in Quick Review and review it.
+Duplicates should find one extra copy. Large & old files: set minimum size
+10 MB, type Other, age Any; all three files should appear. In Storage map,
+Explore Exports, then Back. Review a file selection and Cancel to test the
+confirmation without removing anything. If you choose to confirm on these
+samples, restore the file from Trash in Finder. Space is reclaimed only when
+you empty Trash; StorageFix does not empty it for you.
+
+Permissions
+If a folder cannot be read, choose an accessible folder or review StorageFix
+under System Settings > Privacy & Security > Files and Folders / Full Disk
+Access. No permission changes are made automatically. Hidden files, app
+bundles, empty files, symlinks and hard links are excluded from file browsers.
+
+Local testing build
+Locally signed (ad hoc), not Developer ID signed or notarized. If macOS blocks
+it, review it through System Settings > Privacy & Security.

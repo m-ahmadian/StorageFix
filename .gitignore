@@ -1,0 +1,17 @@
+.build*/
+dist/
+.DS_Store
+.test-fixtures/
+
+__pycache__/
+
+# Local IDE state and credentials
+.swiftpm/
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.key

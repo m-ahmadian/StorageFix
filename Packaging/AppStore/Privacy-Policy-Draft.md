@@ -1,0 +1,52 @@
+# Privacy policy draft
+
+StorageFix Privacy Policy
+Updated October 17, 2026
+
+StorageFix processes file contents and metadata locally on your Mac to find
+matching files, show file sizes and dates, and review storage. File contents,
+paths, hashes, application information and disk-space data are not uploaded.
+There are no accounts, advertising, tracking, analytics or third-party SDKs.
+StorageFix does not collect data from you over a network.
+
+The sandboxed Store edition reads folders you explicitly select. Folder access
+lasts for the app session; choosing a folder again is required after relaunch.
+File scans never remove anything. Reviewed file removals move files to Finder
+Trash, where you can restore them until you empty Trash yourself.
+Application inventory in the Store edition is read-only. Broad system-cache
+cleanup and app uninstalling are not part of that edition.
+
+The direct-download edition also scans allow-listed cache locations and installed
+applications. Its cache cleanup permanently removes explicitly confirmed targets;
+file and app removals use Trash. No macOS permissions are changed automatically.
+
+Your checklist choices and up to twelve recent activity entries are stored in
+this app's local preferences. Activity summaries do not store scanned file lists
+or file contents. You can clear recent activity and reset the checklist in-app.
+Scan reports, the review queue and per-file queue outcomes remain in memory for
+the app session. Queue outcome reports can be exported as text, JSON or CSV.
+Queue exports omit full paths and identifying error details by default; you may
+explicitly include them after reviewing a preview. Scan review text reports
+include folder paths, sizes, counts and scan errors. No export contains scanned
+file contents. Exports are saved only to a location you choose and remain until
+you delete them. You control whether to share them with anyone.
+Scan Comparison can save a baseline as a JSON snapshot at your request. It
+contains the full scope path, relative file names, logical sizes, modification
+timestamps and coverage counts. Snapshot files contain no file contents or
+folder-access grants. Opening a snapshot reads its metadata locally for comparison;
+it never authorizes file removal. Unsaved baselines stay in memory. Saved files
+remain where you put them until you delete them.
+The app does not automatically retain a scan across relaunches. Uninstalling the app alone may
+leave local preferences; macOS manages those preferences and Finder Trash.
+
+Show in Finder, System Settings and App Store Updates open Apple's local apps.
+Those apps and their network behavior are governed by Apple's own policies.
+StorageFix does not request camera, microphone, contacts, messages, passwords
+or security-settings permissions. Choosing a folder grants filesystem access
+to the files under that folder; file-content matching stays on this Mac.
+
+For support, use the developer contact on StorageFix's App Store listing when
+published. A public copy of this policy and support contact must accompany that
+listing before submission. This local test build has not been published.
+
+Publisher action: replace the support reference with a public contact and host this policy before submission.

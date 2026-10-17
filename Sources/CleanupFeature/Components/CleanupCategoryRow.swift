@@ -1,0 +1,69 @@
+import StorageFixCore
+import StorageFixDesignSystem
+import SwiftUI
+
+struct CleanupCategoryRow: View {
+    let category: CleanupCategory
+    let sizeDescription: String
+    @Binding var isSelected: Bool
+
+    var body: some View {
+        Toggle(isOn: $isSelected) {
+            HStack(spacing: DesignSystem.Spacing.medium) {
+                Image(systemName: symbolName)
+                    .font(.title3)
+                    .foregroundStyle(DesignSystem.Colors.accent)
+                    .frame(width: DesignSystem.Size.rowIcon)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
+                    Text(category.name)
+                        .font(.body)
+                    if category.status == .blocked || category.status == .failed {
+                        Label(category.message, systemImage: "exclamationmark.triangle")
+                            .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(category.path)
+                        .font(.caption)
+                        .foregroundStyle(DesignSystem.Colors.secondaryText)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if category.warning.isEmpty == false {
+                    Label(category.warning, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(DesignSystem.Colors.warning)
+                        .lineLimit(1)
+                        .help(category.warning)
+                }
+                Text(sizeDescription)
+                    .font(.body)
+                    .foregroundStyle(category.bytesAfter > 0 ? .primary : .secondary)
+                    .fixedSize()
+            }
+        }
+        .toggleStyle(.checkbox)
+        .padding(.horizontal, DesignSystem.Spacing.medium)
+        .padding(.vertical, DesignSystem.Spacing.small)
+        .disabled(category.bytesAfter == 0)
+        .help(helpText)
+    }
+
+    private var symbolName: String {
+        switch category.id {
+        case "xcode-derived-data", "xcode-doc-cache", "ios-device-support": "hammer"
+        case "xcodebuildmcp-cache": "wrench.and.screwdriver"
+        case "swiftpm-cache", "npm-cache", "node-gyp-cache": "shippingbox"
+        case "google-cache", "claude-cache", "adobe-cache", "codex-runtime-cache": "app"
+        case "user-cache-files": "folder.badge.gearshape"
+        case "app-logs": "doc.text"
+        case "simulator-contents": "iphone"
+        default: "folder"
+        }
+    }
+
+    private var helpText: String {
+        if category.warning.isEmpty == false { return category.warning }
+        if category.message.isEmpty == false { return category.message }
+        return category.path
+    }
+}
