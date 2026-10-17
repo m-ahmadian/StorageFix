@@ -27,6 +27,7 @@ struct StoreScreenshotTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let queue = ReviewQueue(policy: ReviewFilePolicy(protectedRoots: []), operations: QueueFeatureOperations())
         let vm = makeWorkspace(defaults: defaults, queue: queue)
+        vm.setDuplicateComparison(true)
         await vm.review()
         if section == .map { queueSampleFiles(queue) }
         vm.select(section)
