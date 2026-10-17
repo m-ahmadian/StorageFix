@@ -36,7 +36,7 @@ struct StorageMapSummaryView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Folder size breakdown")
             .accessibilityValue(viewModel.chartAccessibilityValue)
-            .chartAngleSelection(value: Binding(get: { viewModel.selectedAngle }, set: viewModel.selectAngle))
+            .chartAngleSelection(value: Binding(get: { viewModel.selectedAngle }, set: { viewModel.selectAngle($0) }))
     }
 
     private var legend: some View {

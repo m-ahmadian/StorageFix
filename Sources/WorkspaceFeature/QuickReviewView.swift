@@ -64,7 +64,7 @@ public struct QuickReviewView: View {
                     .font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                 Toggle("Compare file contents for duplicates (optional)", isOn: Binding(
-                    get: { vm.includesDuplicateComparison }, set: vm.setDuplicateComparison))
+                    get: { vm.includesDuplicateComparison }, set: { vm.setDuplicateComparison($0) }))
                     .toggleStyle(.checkbox).disabled(vm.isBusy)
                 HStack(spacing: DesignSystem.Spacing.small) {
                     Button(vm.lastReviewDate == nil ? (vm.supportsCleanup ? "Start Review" : "Review Folder") : "Review Again", systemImage: "sparkles") {
