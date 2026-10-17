@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.edition }} build and tests
+    runs-on: macos-26
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: direct
+            flags: ""
+          - edition: app-store
+            flags: "-Xswiftc -DAPP_STORE"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift --version
+          sw_vers
+      - name: Build
+        run: swift build ${{ matrix.flags }} --scratch-path .build-ci
+      - name: Test
+        run: swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+      - name: Packaging verifier tests
+        if: matrix.edition == 'app-store'
+        run: python3 -m unittest discover -s Tests/PackagingTests -v
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-${{ matrix.edition }}
+          path: test.log
