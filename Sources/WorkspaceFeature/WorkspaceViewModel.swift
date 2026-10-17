@@ -35,6 +35,8 @@ public final class WorkspaceViewModel: ObservableObject {
     @Published public private(set) var capacityBytes: Int64?
     @Published public private(set) var activity: [ActivityEntry] = []
     @Published public private(set) var hasExplored = false
+    /// A queue run the person has moved on from (new folder or a new review cycle); the journey no longer waits on it.
+    @Published private(set) var acknowledgedRunID: UUID?
     public let edition: DistributionMode
     public var supportsCleanup: Bool { edition == .direct }
     @Published public private(set) var includesDuplicateComparison: Bool
@@ -70,6 +72,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public var isBusy: Bool { reviewQueue?.isExecuting == true || isReviewing || cleanup.isLoading || duplicates.isLoading || files.isLoading || apps.isLoading || map.isLoading }
     public func select(_ section: WorkspaceSection) {
         guard !isReviewing, reviewQueue?.isExecuting != true, section != .cleanup || supportsCleanup else { return }
+        if journey.current == nil { acknowledgedRunID = reviewQueue?.snapshot.lastRun?.id; hasExplored = false }
         if [.map, .files, .duplicates].contains(section), files.hasScanned || latestReport != nil { hasExplored = true }
         selectedSection = section
     }
@@ -81,6 +84,7 @@ public final class WorkspaceViewModel: ObservableObject {
         guard !isBusy else { return }
         files.chooseFolder(folder); duplicates.chooseFolder(folder); map.chooseFolder(folder)
         lastReviewDate = nil; latestReport = nil; reviewMessage = nil; completedSteps = 0; hasExplored = false
+        acknowledgedRunID = reviewQueue?.snapshot.lastRun?.id
         refreshDisk()
     }
     public func review() async {

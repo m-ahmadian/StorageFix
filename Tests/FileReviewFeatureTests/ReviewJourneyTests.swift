@@ -51,4 +51,46 @@ import Testing
         vm.chooseReviewFolder(URL(fileURLWithPath: "/fixture"))
         #expect(!vm.hasExplored && vm.journey.current != .inspect)
     }
+
+    private func addAndRun(_ queue: ReviewQueue, _ queueVM: ReviewQueueViewModel) async {
+        let fixture = QueueFeatureFiles()
+        queue.registerInventory(InventoryScan(sessionID: UUID(), root: fixture.root, options: InventoryOptions(), files: fixture.files), origin: .files)
+        _ = queue.add(paths: [fixture.files[0].path], origin: .files)
+        queueVM.requestConfirmation(); await queueVM.execute()
+    }
+
+    @Test func `A run that moved nothing does not advance the journey to verify`() async {
+        let queue = featureQueue(operations: QueueFeatureOperations(fail: true))
+        let queueVM = ReviewQueueViewModel(queue: queue)
+        let vm = fixtureWorkspace(queue: queueVM)
+        await vm.review(); vm.select(.map)
+        await addAndRun(queue, queueVM)
+        #expect(queueVM.snapshot.lastRun?.movedCount == 0)
+        #expect(vm.journey.current == .queue)
+    }
+
+    @Test func `Choosing a new folder after an operation starts a fresh cycle instead of staying on verify`() async {
+        let queue = featureQueue()
+        let queueVM = ReviewQueueViewModel(queue: queue)
+        let vm = fixtureWorkspace(queue: queueVM)
+        await vm.review(); vm.select(.map)
+        await addAndRun(queue, queueVM)
+        #expect(vm.journey.current == .verify)
+        vm.chooseReviewFolder(URL(fileURLWithPath: "/fixture"))
+        #expect(vm.journey.current == .choose)
+        await vm.review()
+        #expect(vm.journey.current == .understand)
+    }
+
+    @Test func `After a verified outcome, exploring again restarts the cycle at inspect`() async {
+        let queue = featureQueue()
+        let queueVM = ReviewQueueViewModel(queue: queue)
+        let vm = fixtureWorkspace(queue: queueVM)
+        await vm.review(); vm.select(.map)
+        await addAndRun(queue, queueVM)
+        vm.select(.overview); await vm.review()
+        #expect(vm.journey.current == nil)
+        vm.select(.files)
+        #expect(vm.journey.current == .inspect)
+    }
 }

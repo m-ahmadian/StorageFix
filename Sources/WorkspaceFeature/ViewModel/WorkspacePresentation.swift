@@ -1,4 +1,5 @@
 import Foundation
+import StorageFixCore
 
 extension WorkspaceViewModel {
     func navigationTitle(_ section: WorkspaceSection) -> String {
@@ -25,8 +26,13 @@ extension WorkspaceViewModel {
 extension WorkspaceViewModel {
     public var journey: ReviewJourney {
         ReviewJourney(ReviewJourney.Inputs(hasResults: latestReport != nil || files.hasScanned, hasExplored: hasExplored,
-            queuedCount: reviewQueue?.snapshot.items.count ?? 0, lastRunDate: reviewQueue?.snapshot.lastRun?.date,
+            queuedCount: reviewQueue?.snapshot.items.count ?? 0, lastRunDate: pendingRun?.date,
             lastReviewDate: lastReviewDate))
+    }
+    /// The latest run still to verify: at least one file moved, and the person has not moved on from it.
+    private var pendingRun: ReviewQueueRun? {
+        guard let run = reviewQueue?.snapshot.lastRun, run.movedCount > 0, run.id != acknowledgedRunID else { return nil }
+        return run
     }
     var journeyGuidance: String {
         guard let stage = journey.current else {
