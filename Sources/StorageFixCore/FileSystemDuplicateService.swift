@@ -45,18 +45,45 @@ public actor FileSystemDuplicateService: DuplicateServiceProtocol {
         let inventory = try FileInventory.files(in: roots)
         let bySize = Dictionary(grouping: inventory, by: \.bytes)
         var result: [DuplicateGroup] = []
-        for files in bySize.values where files.count > 1 {
-            var byHash: [String: [DuplicateFile]] = [:]
-            for file in files {
-                try Task.checkCancellation()
-                byHash[try hash(URL(fileURLWithPath: file.path)), default: []].append(file)
-            }
-            for (digest, matches) in byHash where matches.count > 1 {
-                let sorted = matches.sorted { $0.path < $1.path }
-                result.append(DuplicateGroup(id: digest, original: sorted[0], duplicates: Array(sorted.dropFirst())))
+        for sameSize in bySize.values where sameSize.count > 1 {
+            for files in try sampleCollisions(sameSize) {
+                var byHash: [String: [DuplicateFile]] = [:]
+                for file in files {
+                    try Task.checkCancellation()
+                    byHash[try hash(URL(fileURLWithPath: file.path)), default: []].append(file)
+                }
+                for (digest, matches) in byHash where matches.count > 1 {
+                    let sorted = matches.sorted { $0.path < $1.path }
+                    result.append(DuplicateGroup(id: digest, original: sorted[0], duplicates: Array(sorted.dropFirst())))
+                }
             }
         }
         return result.sorted { $0.id < $1.id }
+    }
+
+    /// Bytes read from each end of a large file before deciding a full-content comparison is needed.
+    static let sampleBytes = 16_384
+
+    /// Splits same-size files by a head/tail sample. Different samples prove different contents,
+    /// so only colliding files are fully hashed; grouping still relies on the full-content digest.
+    static func sampleCollisions(_ files: [DuplicateFile]) throws -> [[DuplicateFile]] {
+        guard let size = files.first?.bytes, size > Int64(sampleBytes * 2) else { return [files] }
+        var bySample: [String: [DuplicateFile]] = [:]
+        for file in files {
+            try Task.checkCancellation()
+            bySample[try sample(URL(fileURLWithPath: file.path), bytes: size), default: []].append(file)
+        }
+        return bySample.values.filter { $0.count > 1 }.sorted { ($0.first?.path ?? "") < ($1.first?.path ?? "") }
+    }
+
+    private static func sample(_ url: URL, bytes: Int64) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var digest = SHA256()
+        digest.update(data: try handle.read(upToCount: sampleBytes) ?? Data())
+        try handle.seek(toOffset: UInt64(bytes - Int64(sampleBytes)))
+        digest.update(data: try handle.read(upToCount: sampleBytes) ?? Data())
+        return digest.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     private static func validate(_ file: DuplicateFile, hash expected: String) throws {
