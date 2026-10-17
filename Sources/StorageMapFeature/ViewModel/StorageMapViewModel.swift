@@ -25,6 +25,7 @@ public final class StorageMapViewModel: ObservableObject {
     @Published public internal(set) var sort: MapSort = .largest
     @Published public internal(set) var mapStyle: MapStyle = .treemap
     @Published public internal(set) var sunburstSegments: [StorageSunburstSegment] = []
+    var projectionIndex: StorageMapIndex?
     private var folderProjections: [String: [StorageMapItem]] = [:]
     private var projectionOrder: [String] = []
     private static let cachedFolderLimit = 16
@@ -53,7 +54,7 @@ public final class StorageMapViewModel: ObservableObject {
 
     public func acceptInventory(_ result: InventoryScan) {
         guard !isLoading, !isQueueBusy else { return }
-        acceptInventory(result.files, root: result.root)
+        applyInventory(result.files, root: result.root, index: result.mapIndex)
         inventoryResult = result
         comparisonSession?.receive(result)
         queue?.registerInventory(result, origin: .map)
@@ -69,7 +70,11 @@ public final class StorageMapViewModel: ObservableObject {
     }
 
     public func acceptInventory(_ files: [DuplicateFile], root: URL) {
+        applyInventory(files, root: root, index: nil)
+    }
+    private func applyInventory(_ files: [DuplicateFile], root: URL, index: StorageMapIndex?) {
         guard !isLoading, !isQueueBusy else { return }
+        projectionIndex = index
         needsFolder = false
         self.root = root
         current = root
@@ -122,6 +127,7 @@ public final class StorageMapViewModel: ObservableObject {
             inventoryResult = inventory
             comparisonSession?.receive(inventory)
             files = inventory.files
+            projectionIndex = inventory.mapIndex
             clearProjectionCache()
             hasScanned = true
             if inventory.wasCancelled { resultMessage = "Scan cancelled. Partial results remain available. No files were changed." }
@@ -140,6 +146,7 @@ public final class StorageMapViewModel: ObservableObject {
     }
 
     func resetInventory() {
+        projectionIndex = nil
         clearProjectionCache()
         query = ""
         queueAddResult = nil
@@ -167,6 +174,7 @@ public final class StorageMapViewModel: ObservableObject {
         folderProjections = [:]; projectionOrder = []
     }
     private func projectedItems(at folder: URL) -> [StorageMapItem] {
+        if let projectionIndex { return projectionIndex.items(at: folder) }
         let key = folder.path
         if let cached = folderProjections[key] {
             projectionOrder.removeAll { $0 == key }; projectionOrder.append(key)

@@ -16,7 +16,15 @@ public actor FileInventoryService: FileInventoryServiceProtocol {
                           progress: @escaping @Sendable (InventoryProgress) -> Void) async throws -> InventoryScan {
         try Task.checkCancellation()
         let scanner = scanner
-        let worker = Task.detached { try scanner.scan(root: root, options: options, sessionID: sessionID, progress: progress) }
+        let worker = Task.detached {
+            let scan = try scanner.scan(root: root, options: options, sessionID: sessionID, progress: progress)
+            guard !scan.wasCancelled else { return scan }
+            do {
+                let index = try StorageMapIndex(files: scan.files, root: root)
+                return InventoryScan(sessionID: scan.sessionID, root: scan.root, options: scan.options, files: scan.files,
+                    coverage: scan.coverage, coverageAvailable: scan.coverageAvailable, volume: scan.volume, mapIndex: index)
+            } catch is CancellationError { return scan.cancelled() }
+        }
         let result = try await withTaskCancellationHandler {
             try await worker.value
         } onCancel: { worker.cancel() }

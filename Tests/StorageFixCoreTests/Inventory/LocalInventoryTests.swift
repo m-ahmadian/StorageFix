@@ -15,6 +15,7 @@ struct LocalInventoryTests {
         try Data([1]).write(to: folder.appending(path: ".hidden"))
         try FileManager.default.createSymbolicLink(at: folder.appending(path: "outside"), withDestinationURL: URL(fileURLWithPath: "/"))
         let result = try await FileInventoryService().inventory(in: folder, options: InventoryOptions(), sessionID: UUID(), progress: { _ in })
+        #expect(result.mapIndex?.items(at: folder).reduce(0) { $0 + $1.bytes } == result.logicalBytes)
         #expect(result.logicalBytes == 16 && result.files.count == 2)
         #expect(result.files.contains { $0.isSharedLink })
         #expect(result.coverage.counts[.sharedLink] == 1)

@@ -22,3 +22,17 @@ A sampled stack identified repeated `StorageMap.items`/Foundation URL constructi
 To reproduce, run a release test with `STORAGEFIX_BENCHMARK=1`, `STORAGEFIX_BENCHMARK_OUTPUT` set to a chosen JSON path, and filter `LocalPerformanceBaselineTests`. Default test runs skip this fixture to avoid creating 110,000 files routinely.
 
 Remaining: move first-visit projection work away from the main actor or pre-index safely, profile production-app allocations, measure per-dataset memory deltas, repeat under controlled conditions, deep/large-flat/duplicate-heavy fixtures, hashing benchmarks, physical external/read-only/disconnected volumes, blocked OS calls, and signed sandbox interactions. No bounded latency is promised while macOS blocks a filesystem call.
+
+## Prepared hierarchy — October 17 follow-up
+
+`IndexedBaseline.json` records the next identical fixture run. The metadata service now prepares an immutable immediate-child hierarchy on its detached worker before publishing a completed inventory. The map and sunburst use those prepared lists, so a first folder visit no longer regroups the full inventory on the main actor. The index is shared by value with the inventory, clears on scope/inventory changes, contains no filesystem authority and preserves chart/list totals. Cancelled scans keep their useful partial metadata; index preparation checks cancellation. Legacy array-only fixtures retain the bounded fallback cache.
+
+| New service result | 10k files | 100k files |
+| --- | ---: | ---: |
+| First navigation sample | 7.67 ms | 0.92 ms |
+| Navigation p95 | 8.89 ms | 0.91 ms |
+| Navigation slowest | 8.92 ms | 0.92 ms |
+| Scan plus index, median | 2.39 s | 28.09 s |
+| Cancellation acknowledgement | 0.63 ms | 0.62 ms |
+
+Peak resident memory for the entire test process was 216.63 MiB, down from 303 MiB. Both the first/repeated navigation samples and the process-memory target now pass on these local fixtures. The new service timing includes background index preparation; earlier `metadataMilliseconds` figures did not. These are still ordinary-background-activity measurements; no separate enumeration/index-duration or production-app allocation claim is made. Physical external/cloud volumes, deep/large-flat/duplicate-heavy cases, hashing, controlled repeats and distribution-signed runtime validation remain open. The earlier “first uncached visit remains slow” and memory failure describe the previous cache-only implementation.

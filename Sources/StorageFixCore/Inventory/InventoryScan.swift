@@ -49,20 +49,21 @@ public struct InventoryScan: Equatable, Sendable {
     public let wasCancelled: Bool
     /// False for adapters whose array-only source cannot report coverage.
     public let coverageAvailable: Bool
+    public let mapIndex: StorageMapIndex?
     public let volume: InventoryVolume?
     public func cancelled() -> InventoryScan {
         InventoryScan(sessionID: sessionID, root: root, options: options, files: files, coverage: coverage,
-            wasCancelled: true, coverageAvailable: coverageAvailable, volume: volume)
+            wasCancelled: true, coverageAvailable: coverageAvailable, volume: volume, mapIndex: mapIndex)
     }
     public var logicalBytes: Int64 { files.reduce(0) { $0 + $1.bytes } }
     public var knownAllocatedBytes: Int64 { files.reduce(0) { $0 + ($1.allocatedBytes ?? 0) } }
     public var unknownAllocatedCount: Int { files.filter { $0.allocatedBytes == nil }.count }
     public init(sessionID: UUID, root: URL, options: InventoryOptions, files: [DuplicateFile],
                 coverage: InventoryCoverage = InventoryCoverage(), wasCancelled: Bool = false,
-                coverageAvailable: Bool = true, volume: InventoryVolume? = nil) {
+                coverageAvailable: Bool = true, volume: InventoryVolume? = nil, mapIndex: StorageMapIndex? = nil) {
         self.sessionID = sessionID; self.root = root; self.options = options; self.files = files
         self.coverage = coverage; self.wasCancelled = wasCancelled
-        self.coverageAvailable = coverageAvailable; self.volume = volume
+        self.coverageAvailable = coverageAvailable; self.volume = volume; self.mapIndex = mapIndex
     }
 }
 

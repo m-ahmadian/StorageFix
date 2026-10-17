@@ -3,7 +3,7 @@ import StorageFixCore
 
 extension StorageMapViewModel {
     func updateSunburst() {
-        sunburstSegments = mapStyle == .sunburst ? StorageSunburst.segments(files: files, root: current, items: items) : []
+        sunburstSegments = mapStyle == .sunburst ? StorageSunburst.segments(files: files, root: current, items: items, index: projectionIndex) : []
     }
     public func activateSunburst(_ segment: StorageSunburstSegment) {
         guard !isLoading, !isQueueBusy, sunburstSegments.contains(segment) else { return }

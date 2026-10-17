@@ -13,7 +13,7 @@ public struct StorageSunburstSegment: Identifiable, Equatable, Sendable {
 
 /// Two visible hierarchy levels; angles share one logical-byte denominator.
 public enum StorageSunburst {
-    public static func segments(files: [DuplicateFile], root: URL, items: [StorageMapItem]) -> [StorageSunburstSegment] {
+    public static func segments(files: [DuplicateFile], root: URL, items: [StorageMapItem], index projection: StorageMapIndex? = nil) -> [StorageSunburstSegment] {
         let prefix = root.standardizedFileURL.path.hasSuffix("/") ? root.standardizedFileURL.path : root.standardizedFileURL.path + "/"
         let scoped = items.filter { $0.path.hasPrefix(prefix) }
         let slices = StorageMap.chartSlices(items: scoped)
@@ -23,7 +23,7 @@ public enum StorageSunburst {
         for (index, slice) in slices.enumerated() where slice.bytes > 0 {
             let end = start + Double(slice.bytes) / total
             let folder = scoped.first { .item($0.path) == slice.id && $0.isFolder }
-            let children = folder.map { StorageMap.chartSlices(items: StorageMap.items(files: files, at: URL(fileURLWithPath: $0.path))) } ?? []
+            let children = folder.map { StorageMap.chartSlices(items: projection?.items(at: URL(filePath: $0.path, directoryHint: .isDirectory)) ?? StorageMap.items(files: files, at: URL(filePath: $0.path, directoryHint: .isDirectory))) } ?? []
             result.append(StorageSunburstSegment(slice: slice, parentPath: nil, startFraction: start, endFraction: end,
                 colorIndex: index, isOuter: false, extendsToEdge: children.isEmpty))
             if let folder {

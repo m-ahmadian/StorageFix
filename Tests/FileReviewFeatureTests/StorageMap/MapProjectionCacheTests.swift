@@ -19,4 +19,15 @@ import Testing
         vm.chooseFolder(URL(fileURLWithPath: "/other"))
         #expect(vm.items.isEmpty && vm.totalBytes == 0)
     }
+    @Test func `Prepared indexes follow fresh inventory and clear with scope changes`() throws {
+        let root = URL(fileURLWithPath: "/fixture"), files = [DuplicateFile(path: "/fixture/nested/a", bytes: 10)]
+        let index = try StorageMapIndex(files: files, root: root)
+        let vm = StorageMapViewModel(root: root, service: MapInventoryFixture())
+        vm.acceptInventory(InventoryScan(sessionID: UUID(), root: root, options: InventoryOptions(), files: files, mapIndex: index))
+        if let folder = vm.items.first { vm.enter(folder) }
+        #expect(vm.items.first?.path == "/fixture/nested/a")
+        vm.acceptInventory([], root: root)
+        #expect(vm.items.isEmpty && vm.totalBytes == 0)
+    }
+
 }

@@ -68,7 +68,7 @@ Deliver:
 
 Completion gate: users can explain why an item is a candidate and what changed after an action; snapshot/report fixtures reconcile exactly; cancellation/failure never produces a success/reclaimed-space claim. Update privacy declarations when persistence changes.
 
-## 6. Performance and resilience — baseline and revisit optimization delivered; further work open
+## 6. Performance and resilience — local navigation and memory targets met; environment validation open
 
 Record a baseline before optimizing. Benchmark the same fixed datasets on a documented reference Mac: 10k and 100k files, deep folders, large flat folders, duplicate-heavy content, external/read-only volumes and cancellation. Separate metadata enumeration from hashing. Report median and slowest of at least three runs, peak memory, time to first useful progress, total duration and cached navigation latency.
 
@@ -95,7 +95,7 @@ Completion gate: targets pass or are explicitly revised with evidence; no main-t
 | 3. Visual exploration | Implementation delivered; validation pending | `Design/Milestone3/Verification.md`; treemap/ring/sunburst, linked selection and preview routing; usability/VoiceOver/native sandbox preview pending |
 | 4. Shared review queue | Implementation delivered; sandbox validation pending | `Design/Milestone4/Verification.md`; cross-feature policy, immutable confirmation, per-item outcomes; real disposable native Trash/restore passed |
 | 5. Comparison/reports | Implemented slices; validation open | `Design/Milestone5/Verification.md`; snapshots/comparison, duplicate previews and hints, redacted text/JSON/CSV outcomes; free-space measurement and guided journey validation pending |
-| 6. Performance/resilience | Baseline and revisit fix delivered; further work open | `Design/Milestone6/Verification.md`; repeat navigation meets local p95 target; first-visit stalls, memory, broader datasets and environment tests pending |
+| 6. Performance/resilience | Local navigation/memory targets met; validation open | `Design/Milestone6/Verification.md`; off-main prepared hierarchy, first/repeat navigation under target and 217 MiB test-process peak on local fixtures; broader datasets, production profiling and environment tests pending |
 | 7. Beta/release decision | Planned | All previous gates and publisher setup required |
 
 References:
