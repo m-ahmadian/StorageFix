@@ -155,23 +155,36 @@ public struct QuickReviewView: View {
             if let capacity = vm.capacityBytes, let free = vm.availableBytes, capacity > 0 {
                 Chart {
                     SectorMark(angle: .value("Used", max(0, capacity - free)), innerRadius: .ratio(DesignSystem.Chart.ringRatio), angularInset: DesignSystem.Chart.angularInset)
-                        .foregroundStyle(DesignSystem.Colors.accent)
+                        .foregroundStyle(pressureColor)
                     SectorMark(angle: .value("Available", min(capacity, free)), innerRadius: .ratio(DesignSystem.Chart.ringRatio), angularInset: DesignSystem.Chart.angularInset)
-                        .foregroundStyle(DesignSystem.Colors.accent.opacity(DesignSystem.Chart.availableOpacity))
+                        .foregroundStyle(DesignSystem.Colors.groupHeader)
                 }.frame(width: DesignSystem.Size.reviewChart, height: DesignSystem.Size.reviewChart)
                     .chartBackground { _ in
                         VStack(spacing: DesignSystem.Spacing.xSmall) {
-                            Text(vm.availablePercentage).font(.title.weight(.semibold))
-                            Text("available").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                            Text(vm.usedPercentage).font(.title.weight(.semibold))
+                            Text("used").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
                         }
                     }
-                    .accessibilityLabel("Disk space").accessibilityValue("\(vm.size(free)) available of \(vm.size(capacity))")
+                    .accessibilityLabel("Disk space")
+                    .accessibilityValue("\(vm.usedPercentage) used. \(vm.size(free)) available of \(vm.size(capacity)).\(vm.storagePressure.status.map { " \($0)." } ?? "")")
                 Text("\(vm.size(free)) available").font(.callout.weight(.semibold))
                 Text("of \(vm.size(capacity))").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                if let status = vm.storagePressure.status {
+                    Label(status, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.semibold))
+                        .foregroundStyle(pressureColor).accessibilityHidden(true)
+                }
             } else {
                 IconBadge("internaldrive")
                 Text("Disk space unavailable").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
             }
+        }
+    }
+
+    private var pressureColor: Color {
+        switch vm.storagePressure {
+        case .critical: DesignSystem.Colors.critical
+        case .tight: DesignSystem.Colors.warning
+        case .comfortable, .unknown: DesignSystem.Colors.accent
         }
     }
 

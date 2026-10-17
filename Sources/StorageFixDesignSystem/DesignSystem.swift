@@ -29,6 +29,10 @@ public enum DesignSystem {
             dark: .systemOrange
         )
         public static let warningSurface = warning.opacity(0.08)
+        public static let critical = adaptive(
+            light: NSColor(calibratedRed: 0.72, green: 0.16, blue: 0.14, alpha: 1),
+            dark: NSColor(calibratedRed: 1.0, green: 0.42, blue: 0.38, alpha: 1)
+        )
         public static let success = Color.green
     }
 
@@ -60,6 +64,8 @@ public enum DesignSystem {
 
     public enum Size {
         public static let reviewDiskWidth: CGFloat = 190
+        public static let folderChangeLabel: CGFloat = 180
+        public static let folderChangeValue: CGFloat = 96
         public static let reviewChart: CGFloat = 138
         public static let reviewProgressWidth: CGFloat = 280
         public static let coverageDetailsHeight: CGFloat = 160
@@ -103,5 +109,6 @@ public enum DesignSystem {
         public static let mapDimmed = 0.35
         public static let full = 1.0
         public static let pressed = 0.72
+        public static let pillShadow = 0.18
     }
 }

@@ -18,6 +18,13 @@ extension WorkspaceViewModel {
         guard let capacityBytes, let availableBytes, capacityBytes > 0 else { return "—" }
         return (Double(max(0, min(availableBytes, capacityBytes))) / Double(capacityBytes)).formatted(.percent.precision(.fractionLength(0)))
     }
+    /// Share of the volume in use, 0...1; nil when capacity is unknown.
+    var usedFraction: Double? {
+        guard let capacityBytes, let availableBytes, capacityBytes > 0 else { return nil }
+        return 1 - Double(max(0, min(availableBytes, capacityBytes))) / Double(capacityBytes)
+    }
+    var usedPercentage: String { usedFraction.map { $0.formatted(.percent.precision(.fractionLength(0))) } ?? "—" }
+    var storagePressure: StoragePressure { StoragePressure(usedFraction: usedFraction) }
     func size(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
