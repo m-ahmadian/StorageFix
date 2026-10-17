@@ -39,6 +39,11 @@ import StorageFixCore
         do { try await queue.execute(expectedRevision: approved.revision) }
         catch { message = error.localizedDescription }
     }
+    public var canRemeasureFreeSpace: Bool { !isExecuting && snapshot.lastRun?.freeSpace?.beforeBytes != nil }
+    public func remeasureFreeSpace() {
+        guard canRemeasureFreeSpace else { return }
+        queue.remeasureFreeSpace()
+    }
     public func remove(_ path: String) { queue.remove(path: path) }
     public func clear() { queue.clear() }
     public func preview(_ path: String) {
@@ -54,7 +59,7 @@ import StorageFixCore
         if showsConfirmation, confirmationSnapshot?.revision != value.revision {
             cancelConfirmation(); message = ReviewQueueError.reviewChanged.localizedDescription
         }
-        if snapshot.lastRun?.id != value.lastRun?.id { clearReport() }
+        if snapshot.lastRun != value.lastRun { clearReport() }
         snapshot = value
     }
 }

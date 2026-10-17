@@ -10,6 +10,8 @@ import Foundation
     func remove(path: String)
     func clear()
     func execute(expectedRevision: UUID) async throws
+    /// Reads the last operation's volume free space again. Never mutates files.
+    func remeasureFreeSpace()
 }
 
 public protocol ReviewFilePolicyProtocol: Sendable {
