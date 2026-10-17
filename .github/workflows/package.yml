@@ -1,0 +1,39 @@
+name: Package test DMGs
+
+# Ad hoc signed, not notarized: for local testing only, never for distribution.
+on:
+  push:
+    branches: [main, "claude/dmg"]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build direct and Store test DMGs
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh
+          SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh
+          python3 Scripts/verify-store.py dist/AppStore/StorageFix.app
+          ls -la dist/StorageFix.dmg dist/AppStore/StorageFix.dmg
+      - name: Publish DMGs to the ci-dmg branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out="$RUNNER_TEMP/dmg"; mkdir -p "$out"
+          cp dist/StorageFix.dmg "$out/StorageFix-Direct.dmg"
+          cp dist/AppStore/StorageFix.dmg "$out/StorageFix-AppStore-Test.dmg"
+          cd "$out"
+          echo "Test DMGs for ${GITHUB_SHA} (${GITHUB_REF_NAME}). Ad hoc signed, not notarized." > README.md
+          git init -q -b main && git config user.name "storagefix-ci" && git config user.email "ci@users.noreply.github.com"
+          git add -A && git commit -qm "Test DMGs for ${GITHUB_SHA::7}"
+          git push -f -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-dmg
+          echo "::notice title=DMGs::$(ls -l *.dmg | awk '{print $5, $9}' | tr '\n' ' ')"
