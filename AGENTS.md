@@ -18,7 +18,7 @@ This is the private StorageFix source repository. The initial application releas
 
 - A scan, preview, suggestion, imported snapshot or queue addition never authorizes removal. Preserve explicit immutable review and live revalidation before Trash.
 - Never infer recovered space from logical bytes or move-to-Trash results. Distinguish incomplete coverage and unknown metadata.
-- Keep Store restrictions: chosen-folder access, no shell cleanup, no application removal or permanent file deletion.
+- Keep Store restrictions: chosen-folder access, no shell cleanup, no application removal. The only permanent deletion allowed in the Store build is the native cache cleanup (owner decision October 17, 2026): contents of allow-listed, rebuildable cache folders inside the granted Home folder, after explicit review and confirmation, never following symbolic links and never removing user files. Reviewed files elsewhere still go to Trash.
 - Test view-model success, failure and loading with mock dependencies. Add meaningful regression tests for changed behavior and run relevant tests in both direct and APP_STORE configurations.
 - Never exercise destructive checks on personal data. Native Trash tests use opt-in uniquely named disposable fixtures only.
 - Do not claim human usability, VoiceOver, signed-sandbox, external-volume, old-OS or Intel-runtime gates have passed without recorded evidence.

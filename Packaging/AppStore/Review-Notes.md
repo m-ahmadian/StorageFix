@@ -16,7 +16,7 @@ StorageFix is a native macOS utility. No login, subscription, server, or reviewe
 
 ## Store boundaries
 
-The app uses App Sandbox and user-selected file read/write only. No Full Disk Access, privileged helper, background agent, login item, external updater, shell cleanup script or network service is included. Broad cache cleanup and app uninstalling are excluded from this edition. File contents and hashes stay on-device. Exported reports are explicitly saved by the user and may contain folder paths and scan errors.
+The app uses App Sandbox and user-selected file read/write only. No Full Disk Access, privileged helper, background agent, login item, external updater, shell cleanup script or network service is included. App uninstalling is excluded from this edition. Cache cleanup is implemented natively in Swift: the user chooses their Home folder in an open panel, the app measures only allow-listed rebuildable caches (for example Xcode DerivedData, package-manager caches, ~/Library/Logs and other apps' ~/Library/Caches folders, excluding com.apple.*), shows every folder and warning, and permanently deletes the selected cache contents only after confirmation. Categories are skipped while their owning app is running. File contents and hashes stay on-device. Exported reports are explicitly saved by the user and may contain folder paths and scan errors.
 
 Trash actions are optional and require a review. Please use disposable files if testing removal. Scans are read-only. Logical file sizes can differ from physical disk space, and moving a file to Trash does not immediately free that space.
 

@@ -26,6 +26,11 @@ public struct CleanupView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
             CleanupHeaderView()
+            if viewModel.needsAccess {
+                CleanupAccessCard(viewModel: viewModel)
+                CleanupStatusView(errorMessage: viewModel.errorMessage)
+                Spacer()
+            } else {
             StorageSummaryView(
                 availableBefore: viewModel.freeSpaceBeforeDescription,
                 availableAfter: viewModel.freeSpaceAfterDescription,
@@ -48,7 +53,7 @@ public struct CleanupView: View {
             CleanupSelectionHeader(
                 selectAllTitle: viewModel.selectAllButtonTitle,
                 isDisabled: viewModel.isLoading || viewModel.hasSelectableCategories == false,
-                toggleSelectAll: viewModel.toggleSelectAll
+                toggleSelectAll: { viewModel.toggleSelectAll() }
             )
             CleanupGroupListView(
                 viewModel: viewModel,
@@ -60,8 +65,9 @@ public struct CleanupView: View {
                 isLoading: viewModel.isLoading,
                 canClean: viewModel.selectedCategoryIDs.isEmpty == false,
                 rescan: rescan,
-                clean: viewModel.requestCleanup
+                clean: { viewModel.requestCleanup() }
             )
+            }
         }
         .padding(DesignSystem.Spacing.large)
         .frame(
@@ -70,7 +76,7 @@ public struct CleanupView: View {
         )
         .background(DesignSystem.Colors.background)
         .task {
-            guard scansOnAppear, !viewModel.hasScanned else { return }
+            guard scansOnAppear, !viewModel.hasScanned, !viewModel.needsAccess else { return }
             rescan()
             await scanTask?.value
         }

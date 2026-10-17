@@ -50,11 +50,16 @@ public extension View {
     }
 }
 public enum FolderPicker {
-    @MainActor public static func choose(access: (any FolderAccessSessionProtocol)?) -> URL? {
+    static let reviewTip = "Tip: choose your Home folder to review Desktop, Documents and Downloads together. StorageFix does not keep access after you quit."
+
+    /// Shows a folder panel; the chosen folder's sandbox scope is retained by `access` for this session only.
+    @MainActor public static func choose(access: (any FolderAccessSessionProtocol)?, startingAt directory: URL? = nil,
+                                         message: String? = nil, prompt: String = "Choose Folder") -> URL? {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
-        panel.prompt = "Choose Folder"
-        panel.message = "Tip: choose your Home folder to review Desktop, Documents and Downloads together. StorageFix does not keep access after you quit."
+        panel.prompt = prompt
+        panel.message = message ?? reviewTip
+        if let directory { panel.directoryURL = directory }
         guard panel.runModal() == .OK, let folder = panel.url else { return nil }
         guard let access else { return nil }
         access.retain(folder)
