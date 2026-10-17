@@ -49,7 +49,7 @@ extension WorkspaceViewModel {
         case .choose:
             return files.needsFolder ? "Choose a folder, then run Quick Review. Scans only read metadata." : "Run Quick Review to measure this folder. Scans only read metadata."
         case .understand:
-            return "Open Storage Map or the report to see where space goes. Nothing is selected for you."
+            return "Your review is ready. Open Storage Map or the report to see where space goes. Nothing is selected for you."
         case .inspect:
             return "Inspect large files and duplicates, then add only the files you choose to the Review Queue."
         case .queue:

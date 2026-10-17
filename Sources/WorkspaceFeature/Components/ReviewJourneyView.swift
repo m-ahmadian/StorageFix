@@ -7,6 +7,8 @@ struct ReviewJourneyView: View {
     let guidance: String
     let actionTitle: String?
     let action: (WorkspaceSection) -> Void
+    var secondaryTitle: String? = nil
+    var secondaryAction: () -> Void = {}
 
     private static let markerSize: CGFloat = 22
 
@@ -22,8 +24,9 @@ struct ReviewJourneyView: View {
                 Text(guidance).font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
+                if let secondaryTitle { Button(secondaryTitle, systemImage: "doc.text", action: secondaryAction) }
                 if let actionTitle, let stage = journey.current {
-                    Button(actionTitle) { action(stage.section) }
+                    Button(actionTitle) { action(stage.section) }.buttonStyle(PrimaryButtonStyle())
                 }
             }
         }

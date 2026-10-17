@@ -22,7 +22,8 @@ public struct QuickReviewView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.large) {
                 heading
                 introduction
-                ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select)
+                ReviewJourneyView(journey: vm.journey, guidance: vm.journeyGuidance, actionTitle: vm.journeyActionTitle, action: select,
+                    secondaryTitle: vm.latestReport == nil ? nil : "View Report…", secondaryAction: { showsReport = true })
                 if vm.isReviewing { progress }
                 reviewOutcome
                 HStack {
@@ -100,14 +101,10 @@ public struct QuickReviewView: View {
         }.padding(DesignSystem.Spacing.medium).workspaceCard()
     }
 
+    /// Problems, cancellations and queue results stay visible; a clean review is summarised by the journey card.
     @ViewBuilder private var reviewOutcome: some View {
-        if let message = vm.reviewMessage {
-            HStack(spacing: DesignSystem.Spacing.medium) {
-                ReviewNotice(message, isError: vm.latestReport?.needsAttention == true)
-                if vm.latestReport != nil {
-                    Button("View Report…", systemImage: "doc.text") { showsReport = true }
-                }
-            }
+        if let message = vm.reviewMessage, vm.latestReport == nil || vm.latestReport?.needsAttention == true {
+            ReviewNotice(message, isError: vm.latestReport?.needsAttention == true)
         }
     }
 
