@@ -3,7 +3,8 @@ import StorageFixCore
 
 extension WorkspaceViewModel {
     func navigationTitle(_ section: WorkspaceSection) -> String {
-        section == .queue ? "Review Queue (\(reviewQueue?.snapshot.items.count ?? 0))" : section.rawValue
+        guard section == .queue, let count = reviewQueue?.snapshot.items.count, count > 0 else { return section.rawValue }
+        return "Review Queue (\(count))"
     }
     private var collapsedActivityCount: Int { 3 }
     var hasMoreActivity: Bool { activity.count > collapsedActivityCount }

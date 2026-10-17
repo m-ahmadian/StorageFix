@@ -59,7 +59,7 @@ public struct DuplicateView: View {
                     if vm.groups.isEmpty && !vm.isLoading {
                         ContentUnavailableView(vm.hasScanned ? "No duplicates found" : "Choose where to look",
                             systemImage: vm.hasScanned ? "checkmark.circle" : "doc.on.doc",
-                            description: Text(vm.hasScanned ? "No matching nonempty files in this folder. Try another location." : "Scan your personal folders or choose a folder. Hidden files, app bundles and hard links are skipped. Nothing changes during a scan."))
+                            description: Text(vm.hasScanned ? "No matching nonempty files in this folder. Try another location." : "Choose a folder, then scan to compare file contents. Hidden files, app bundles and hard links are skipped. Nothing changes during a scan."))
                     } else if visibleGroups.isEmpty && !vm.isLoading {
                         ContentUnavailableView.search(text: query)
                     }
