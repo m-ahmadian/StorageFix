@@ -34,7 +34,7 @@ public struct DuplicateView: View {
                 Label("\(vm.groups.count) matching \(vm.groups.count == 1 ? "set" : "sets")", systemImage: "doc.on.doc")
                 Label("\(vm.selectedPaths.count) copies selected", systemImage: "checkmark.circle")
                 Spacer()
-                Text(ByteCountFormatter.string(fromByteCount: vm.selectedBytes, countStyle: .file)).font(.title2.bold())
+                Text(vm.selectedBytes > 0 ? ByteCountFormatter.string(fromByteCount: vm.selectedBytes, countStyle: .file) : "Nothing selected").font(.title2.bold())
             }.padding(20).workspaceCard()
             if vm.isLoading {
                 HStack {

@@ -23,6 +23,13 @@ struct DuplicateCard: View {
             ForEach(group.duplicates) { row($0, isCopy: true) }
         }.padding(DesignSystem.Spacing.medium).workspaceCard()
     }
+    /// Folder path with the folders that differ between copies emphasised.
+    private func highlightedFolder(_ path: String) -> Text {
+        let parts = PathHighlight.make(for: path, among: ([group.original] + group.duplicates).map(\.path))
+        return Text(parts.shared).foregroundStyle(DesignSystem.Colors.secondaryText)
+            + Text(parts.distinct).foregroundStyle(DesignSystem.Colors.accent).fontWeight(.semibold)
+            + Text(URL(fileURLWithPath: path).lastPathComponent).foregroundStyle(DesignSystem.Colors.secondaryText)
+    }
     private func row(_ file: DuplicateFile, isCopy: Bool) -> some View {
         HStack(spacing: DesignSystem.Spacing.small) {
             if isCopy {
@@ -34,8 +41,9 @@ struct DuplicateCard: View {
             }
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
                 Text(URL(fileURLWithPath: file.path).lastPathComponent).fontWeight(isCopy ? .regular : .semibold)
-                Text(file.path).font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
+                highlightedFolder(file.path).font(.caption)
                     .lineLimit(2).textSelection(.enabled).help(file.path)
+                    .accessibilityLabel(file.path)
                 if let date = file.modifiedAt { Text("Modified \(date.formatted())").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText) }
             }
             Spacer()
