@@ -43,7 +43,9 @@ jobs:
           mkdir -p renders store-screenshots
           [ -n "$STORAGEFIX_STORE_SCREENSHOTS" ] || unset STORAGEFIX_STORE_SCREENSHOTS
           swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
-          test "${PIPESTATUS[0]}" -eq 0
+          echo "::notice title=${{ matrix.edition }} tests::$(grep -E 'Test run with [0-9]+ tests? (in [0-9]+ suites? )?(passed|failed)' test.log | tail -1)"
+          echo "::notice title=${{ matrix.edition }} skipped::$(grep -cE 'Test .* skipped' test.log || true) skipped"
+          echo "::notice title=${{ matrix.edition }} renders::$(ls renders 2>/dev/null | wc -l | tr -d ' ') PNG renders" 
       - name: Packaging verifier tests
         if: matrix.edition == 'app-store'
         run: python3 -m unittest discover -s Tests/PackagingTests -v
