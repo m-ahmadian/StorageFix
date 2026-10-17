@@ -1,0 +1,24 @@
+name: Toolchain probe
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [".github/workflows/toolchain-probe.yml"]
+
+jobs:
+  probe:
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build every installed Xcode
+        run: |
+          for x in $(ls -d /Applications/Xcode*.app | sort -V); do
+            sudo xcode-select -s "$x"
+            v=$(swift --version 2>&1 | head -1 | sed 's/.*Swift version \([0-9.]*\).*/\1/')
+            if swift build --scratch-path ".build-$(basename "$x" .app)" > build.txt 2>&1; then r=success; else r="failed: $(grep -m1 -E 'error:' build.txt | cut -c1-200)"; fi
+            echo "::notice title=$(basename "$x")::Swift $v → $r"
+          done
