@@ -69,17 +69,20 @@ jobs:
             renders/*.png
             store-screenshots/*.png
           if-no-files-found: ignore
-      - name: Publish renders to the ci-renders branch
+      - name: Publish renders to a ci-renders branch
         if: success() && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          src="$GITHUB_WORKSPACE/renders"; ls "$src"/*.png >/dev/null 2>&1 || exit 0
-          dest="renders/${GITHUB_REF_NAME//\//-}/${{ matrix.edition }}"
-          git config user.name "storagefix-ci"; git config user.email "ci@users.noreply.github.com"
-          git fetch -q origin ci-renders && git worktree add -q ../out origin/ci-renders || { git worktree add -q --detach ../out && git -C ../out checkout -q --orphan ci-renders && git -C ../out rm -rfq . ; }
-          mkdir -p "../out/$dest" && rm -f "../out/$dest"/*.png && cp "$src"/*.png "../out/$dest/"
-          [ -d "$GITHUB_WORKSPACE/store-screenshots" ] && cp "$GITHUB_WORKSPACE"/store-screenshots/*.png "../out/$dest/" 2>/dev/null || true
-          cd ../out && git add -A && git commit -qm "Renders for ${GITHUB_SHA::7} (${{ matrix.edition }})" || exit 0
-          for i in 1 2 3; do git pull -q --rebase origin ci-renders 2>/dev/null; git push -q origin HEAD:ci-renders && break; sleep 5; done
+          ls renders/*.png >/dev/null 2>&1 || exit 0
+          out="$RUNNER_TEMP/renders-out"; rm -rf "$out"; mkdir -p "$out"
+          cp renders/*.png "$out/"; cp store-screenshots/*.png "$out/" 2>/dev/null || true
+          cd "$out"
+          git init -q -b main && git config user.name "storagefix-ci" && git config user.email "ci@users.noreply.github.com"
+          echo "Renders for ${GITHUB_SHA} (${{ matrix.edition }}, ${GITHUB_REF_NAME})" > README.md
+          git add -A && git commit -qm "Renders for ${GITHUB_SHA::7} (${{ matrix.edition }})"
+          git push -f -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-renders-${{ matrix.edition }}
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v5
