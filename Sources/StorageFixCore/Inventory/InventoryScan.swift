@@ -72,7 +72,10 @@ public struct InventoryVolume: Equatable, Sendable {
     public let capacityBytes: Int64?
     public let availableBytes: Int64?
     public let isReadOnly: Bool?
-    public init(name: String?, capacityBytes: Int64?, availableBytes: Int64?, isReadOnly: Bool?) {
+    /// Stable volume identity (APFS/HFS UUID) when macOS reports one; display names can repeat across volumes.
+    public let identifier: String?
+    public init(name: String?, capacityBytes: Int64?, availableBytes: Int64?, isReadOnly: Bool?, identifier: String? = nil) {
         self.name = name; self.capacityBytes = capacityBytes; self.availableBytes = availableBytes; self.isReadOnly = isReadOnly
+        self.identifier = identifier
     }
 }

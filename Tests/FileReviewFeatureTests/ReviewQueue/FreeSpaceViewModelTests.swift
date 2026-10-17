@@ -5,7 +5,7 @@ import Testing
 
 @MainActor struct FreeSpaceViewModelTests {
     @Test func `Queue view model offers remeasurement only after a measured operation`() async {
-        let volumes = SequencedFeatureVolumes(available: [1_000, 1_000, 1_100, 1_100])
+        let volumes = SequencedFeatureVolumes(available: [1_000, 1_100])
         let queue = ReviewQueue(policy: ReviewFilePolicy(protectedRoots: []), operations: QueueFeatureOperations(), volumes: volumes)
         let vm = ReviewQueueViewModel(queue: queue)
         #expect(!vm.canRemeasureFreeSpace && vm.freeSpaceDescription == nil)

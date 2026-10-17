@@ -40,6 +40,7 @@ public struct FreeSpaceMeasurement: Equatable, Sendable {
 /// Reads available capacity for the single volume holding a queue batch.
 struct FreeSpaceProbe {
     static let unreadable = "The volume did not report its free space."
+    static let unverifiedVolume = "Queued files come from several folders whose shared volume could not be confirmed, so free space was not measured."
     static let multipleVolumes = "Queued files appear to span more than one volume, so free space was not measured."
     let volumes: any VolumeInformationServiceProtocol
 
@@ -47,9 +48,11 @@ struct FreeSpaceProbe {
     func target(for roots: [URL]) -> Result<URL, FreeSpaceProbeError> {
         let unique = Array(Set(roots.map(\.standardizedFileURL)))
         guard let first = unique.first else { return .failure(FreeSpaceProbeError(Self.unreadable)) }
-        let names = unique.map { volumes.volume(at: $0)?.name }
-        guard !names.contains(where: { $0 == nil }) else { return .failure(FreeSpaceProbeError(Self.unreadable)) }
-        guard Set(names).count == 1 else { return .failure(FreeSpaceProbeError(Self.multipleVolumes)) }
+        guard unique.count > 1 else { return .success(first) }
+        // Names can repeat ("Untitled"), so several roots are measured only when every volume reports the same UUID.
+        let identities = unique.map { volumes.volume(at: $0)?.identifier }
+        guard !identities.contains(where: { $0 == nil }) else { return .failure(FreeSpaceProbeError(Self.unverifiedVolume)) }
+        guard Set(identities).count == 1 else { return .failure(FreeSpaceProbeError(Self.multipleVolumes)) }
         return .success(first)
     }
 

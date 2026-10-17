@@ -6,11 +6,15 @@ final class SequencedVolumes: VolumeInformationServiceProtocol, @unchecked Senda
     private let lock = NSLock()
     private var available: [Int64?]
     private let names: [String: String]
-    init(available: [Int64?], names: [String: String] = [:]) { self.available = available; self.names = names }
+    private let identifiers: [String: String]
+    init(available: [Int64?], names: [String: String] = [:], identifiers: [String: String] = [:]) {
+        self.available = available; self.names = names; self.identifiers = identifiers
+    }
     func volume(at root: URL) -> InventoryVolume? {
         lock.lock(); defer { lock.unlock() }
         let value = available.count > 1 ? available.removeFirst() : available.first ?? nil
-        return InventoryVolume(name: names[root.path] ?? "Fixture", capacityBytes: 10_000, availableBytes: value, isReadOnly: false)
+        return InventoryVolume(name: names[root.path] ?? "Fixture", capacityBytes: 10_000, availableBytes: value, isReadOnly: false,
+            identifier: identifiers[root.path])
     }
 }
 
@@ -26,7 +30,7 @@ final class SequencedVolumes: VolumeInformationServiceProtocol, @unchecked Senda
     }
 
     @Test func `Given a readable volume, when files move, then before and after free space are observed separately from logical bytes`() async throws {
-        let queue = queue(SequencedVolumes(available: [1_000, 1_000, 1_250]))
+        let queue = queue(SequencedVolumes(available: [1_000, 1_250]))
         let measurement = try #require(try await run(queue)?.freeSpace)
         #expect(measurement.beforeBytes == 1_000 && measurement.afterBytes == 1_250)
         #expect(measurement.changeBytes == 250 && measurement.isMeasured)
@@ -52,8 +56,7 @@ final class SequencedVolumes: VolumeInformationServiceProtocol, @unchecked Senda
         #expect(run.movedCount == 0 && run.freeSpace == nil)
     }
 
-    @Test func `Given files on two volumes, then free space is not measured as one volume`() async throws {
-        let volumes = SequencedVolumes(available: [500], names: ["/fixture": "One", "/other": "Two"])
+    private func runAcrossRoots(_ volumes: SequencedVolumes) async throws -> FreeSpaceMeasurement {
         let queue = queue(volumes)
         queue.registerInventory(QueueFixtures.scan([QueueFixtures.file("a")]), origin: .files)
         let other = DuplicateFile(path: "/other/b", bytes: 100, modifiedAt: Date(timeIntervalSince1970: 100), fileIdentity: "device:b")
@@ -61,12 +64,34 @@ final class SequencedVolumes: VolumeInformationServiceProtocol, @unchecked Senda
             files: [other], volume: InventoryVolume(name: "Two", capacityBytes: 1000, availableBytes: 500, isReadOnly: false)), origin: .map)
         _ = queue.add(paths: ["/fixture/a"], origin: .files); _ = queue.add(paths: ["/other/b"], origin: .map)
         try await queue.execute(expectedRevision: queue.snapshot.revision)
-        let measurement = try #require(queue.snapshot.lastRun?.freeSpace)
+        return try #require(queue.snapshot.lastRun?.freeSpace)
+    }
+
+    @Test func `Given files on two volumes, then free space is not measured as one volume`() async throws {
+        let measurement = try await runAcrossRoots(SequencedVolumes(available: [500],
+            names: ["/fixture": "One", "/other": "Two"], identifiers: ["/fixture": "UUID-1", "/other": "UUID-2"]))
         #expect(!measurement.isMeasured && measurement.unavailableReason?.contains("more than one volume") == true)
     }
 
+    @Test func `Given two volumes sharing a display name, then distinct identifiers still prevent a single-volume measurement`() async throws {
+        let measurement = try await runAcrossRoots(SequencedVolumes(available: [500],
+            names: ["/fixture": "Untitled", "/other": "Untitled"], identifiers: ["/fixture": "UUID-1", "/other": "UUID-2"]))
+        #expect(!measurement.isMeasured && measurement.unavailableReason?.contains("more than one volume") == true)
+    }
+
+    @Test func `Given several roots without volume identifiers, then the shared volume is unconfirmed and not measured`() async throws {
+        let measurement = try await runAcrossRoots(SequencedVolumes(available: [500]))
+        #expect(!measurement.isMeasured && measurement.unavailableReason?.contains("could not be confirmed") == true)
+    }
+
+    @Test func `Given several roots on one identified volume, then free space is measured`() async throws {
+        let measurement = try await runAcrossRoots(SequencedVolumes(available: [500, 500, 700],
+            identifiers: ["/fixture": "UUID-1", "/other": "UUID-1"]))
+        #expect(measurement.isMeasured)
+    }
+
     @Test func `Remeasuring updates only the observation and keeps the operation and revision`() async throws {
-        let queue = queue(SequencedVolumes(available: [1_000, 1_000, 1_000, 1_000, 4_000]))
+        let queue = queue(SequencedVolumes(available: [1_000, 1_000, 4_000]))
         let first = try #require(try await run(queue))
         let revision = queue.snapshot.revision
         queue.remeasureFreeSpace()
