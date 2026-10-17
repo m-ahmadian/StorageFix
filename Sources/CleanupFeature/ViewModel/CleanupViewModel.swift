@@ -16,12 +16,15 @@ public final class CleanupViewModel: ObservableObject {
     @Published public private(set) var freeBytesReclaimed: Int64 = 0
     @Published public private(set) var hasCleanupSummary = false
     @Published public var showsConfirmation = false
+    /// True until the person grants the folder this edition's cleanup requires (the sandboxed build needs Home).
+    @Published public private(set) var needsAccess: Bool
 
     private let service: any CleanupServiceProtocol
     private let byteFormatter: ByteCountFormatter
 
     public init(service: any CleanupServiceProtocol) {
         self.service = service
+        needsAccess = service.requiredFolder != nil
         byteFormatter = ByteCountFormatter()
         byteFormatter.countStyle = .file
     }
@@ -136,8 +139,30 @@ public final class CleanupViewModel: ObservableObject {
         }
     }
 
-    public func scan() async {
+    /// The folder to preselect in the access panel, when one is required.
+    public var requiredFolder: URL? { service.requiredFolder }
+
+    /// Grants the chosen folder and scans. A wrong folder leaves access unchanged and explains why.
+    public func grantAccess(to folder: URL) async {
         guard !isLoading else { return }
+        do {
+            try await service.grantAccess(to: folder)
+            needsAccess = !(await service.hasAccess)
+            errorMessage = nil
+            if !needsAccess { await scan() }
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    /// Quietly accepts a folder chosen elsewhere (e.g. Quick Review) when it is the required one.
+    public func offerFolder(_ folder: URL) async {
+        guard needsAccess, let required = requiredFolder,
+              folder.resolvingSymlinksInPath().standardizedFileURL.path == required.resolvingSymlinksInPath().standardizedFileURL.path else { return }
+        try? await service.grantAccess(to: folder)
+        needsAccess = !(await service.hasAccess)
+    }
+
+    public func scan() async {
+        guard !isLoading, !needsAccess else { return }
         operationDescription = "Scanning caches…"
         await perform {
             let report = try await service.scan()
