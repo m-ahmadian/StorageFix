@@ -32,7 +32,14 @@ jobs:
       - name: Build
         run: swift build ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee build.log
       - name: Test
-        run: swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+        env:
+          STORAGEFIX_RENDER_DIRECTORY: ${{ github.workspace }}/renders
+          STORAGEFIX_STORE_SCREENSHOTS: ${{ matrix.edition == 'app-store' && format('{0}/store-screenshots', github.workspace) || '' }}
+        run: |
+          mkdir -p renders store-screenshots
+          [ -n "$STORAGEFIX_STORE_SCREENSHOTS" ] || unset STORAGEFIX_STORE_SCREENSHOTS
+          swift test ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee test.log
+          test "${PIPESTATUS[0]}" -eq 0
       - name: Packaging verifier tests
         if: matrix.edition == 'app-store'
         run: python3 -m unittest discover -s Tests/PackagingTests -v
@@ -45,6 +52,15 @@ jobs:
             echo "::error title=$log errors::$(grep -E 'error:|✘|failed|Fatal|crash' "$log" | sort -u | head -150 | encode)"
             echo "::warning title=$log tail::$(tail -40 "$log" | encode)"
           done
+      - name: Upload renders
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: renders-${{ matrix.edition }}
+          path: |
+            renders/*.png
+            store-screenshots/*.png
+          if-no-files-found: ignore
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v5
@@ -55,7 +71,8 @@ jobs:
 
   benchmark:
     name: Opt-in performance baselines
-    if: github.event_name == 'workflow_dispatch'
+    # Manual run, or include [benchmark] in a pushed commit message.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[benchmark]'))
     runs-on: macos-26
     timeout-minutes: 60
     steps:
