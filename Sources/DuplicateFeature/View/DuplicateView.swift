@@ -13,7 +13,15 @@ public struct DuplicateView: View {
     @ObservedObject private var vm: DuplicateViewModel
     @State private var sort: Sort = .size
     @State private var query = ""
-    public init(viewModel: DuplicateViewModel) { vm = viewModel }
+    /// Filtered and sorted once per change, not on every redraw.
+    @State private var shown: [DuplicateGroup] = []
+    /// Only this many sets are built at a time, so even huge results scroll smoothly.
+    @State private var limit = DuplicateView.pageSize
+    private static let pageSize = 150
+    public init(viewModel: DuplicateViewModel) {
+        vm = viewModel
+        _shown = State(initialValue: Self.arrange(viewModel.groups, query: "", sort: .size))
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -56,15 +64,24 @@ public struct DuplicateView: View {
                         ContentUnavailableView(vm.hasScanned ? "No duplicates found" : "Choose where to look",
                             systemImage: vm.hasScanned ? "checkmark.circle" : "doc.on.doc",
                             description: Text(vm.hasScanned ? "No matching nonempty files in this folder. Try another location." : "Choose a folder, then scan to compare file contents. Hidden files, app bundles and hard links are skipped. Nothing changes during a scan."))
-                    } else if visibleGroups.isEmpty && !vm.isLoading {
+                    } else if shown.isEmpty && !vm.isLoading {
                         ContentUnavailableView.search(text: query)
                     }
-                    ForEach(visibleGroups) { group in
+                    ForEach(shown.prefix(limit)) { group in
                         DuplicateCard(group: group, selected: vm.selectedPaths, reveal: vm.reveal, keep: vm.keep, select: vm.setSelected, preview: vm.preview, canPreview: vm.canPreview, suggestion: vm.suggestion(in: group))
                             .disabled(vm.isLoading || vm.isQueueBusy)
                     }
+                    if shown.count > limit {
+                        Button("Show \(min(DuplicateView.pageSize, shown.count - limit)) more of \(shown.count - limit) remaining sets") {
+                            limit += DuplicateView.pageSize
+                        }.padding(.vertical, 8)
+                    }
                 }
             }
+            .onAppear(perform: refreshShown)
+            .onChange(of: vm.groups) { refreshShown() }
+            .onChange(of: query) { limit = DuplicateView.pageSize; refreshShown() }
+            .onChange(of: sort) { refreshShown() }
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("One copy always stays.").font(.headline)
@@ -106,8 +123,10 @@ public struct DuplicateView: View {
         }
     }
 
-    private var visibleGroups: [DuplicateGroup] {
-        vm.groups.filter { query.isEmpty || ([$0.original] + $0.duplicates).contains { $0.path.localizedCaseInsensitiveContains(query) } }.sorted {
+    private func refreshShown() { shown = Self.arrange(vm.groups, query: query, sort: sort) }
+
+    private static func arrange(_ groups: [DuplicateGroup], query: String, sort: Sort) -> [DuplicateGroup] {
+        groups.filter { query.isEmpty || ([$0.original] + $0.duplicates).contains { $0.path.localizedCaseInsensitiveContains(query) } }.sorted {
             switch sort {
             case .size: return $0.original.bytes * Int64($0.duplicates.count) > $1.original.bytes * Int64($1.duplicates.count)
             case .name: return URL(fileURLWithPath: $0.original.path).lastPathComponent.localizedStandardCompare(URL(fileURLWithPath: $1.original.path).lastPathComponent) == .orderedAscending
