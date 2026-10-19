@@ -7,6 +7,10 @@ public struct CacheCategoryDefinition: Equatable, Sendable {
         case contents([String])
         /// Remove the children of one folder except the named entries and prefixes.
         case childrenExcluding(String, names: Set<String>, prefixes: [String])
+        /// Top-level regular files in one folder with one of these extensions, added more than `olderThanDays` ago.
+        case files(String, extensions: Set<String>, olderThanDays: Int)
+        /// Bundle-ID named items in these folders that belong to no installed application.
+        case orphans([String])
     }
     public let id: String
     public let name: String
@@ -16,13 +20,20 @@ public struct CacheCategoryDefinition: Equatable, Sendable {
     public let warning: String
     /// Cleaning is blocked while an app whose bundle ID starts with one of these is running.
     public let blockingBundlePrefixes: [String]
+    /// Moved to the Trash instead of deleted, for anything that is not a rebuildable cache.
+    public var movesToTrash = false
 }
 
 /// Allow-listed, rebuildable caches. Nothing outside these folders is ever removed.
 public enum CacheCategoryCatalog {
     static let xcode = ["com.apple.dt.Xcode"]
 
-    public static let standard: [CacheCategoryDefinition] = [
+    /// Everything the sandboxed edition may clean: rebuildable caches plus Trash-only installers and leftovers.
+    public static let standard: [CacheCategoryDefinition] = caches + developer + clutter
+    /// The direct edition adds simulator contents, which the sandbox cannot reach safely.
+    public static let direct: [CacheCategoryDefinition] = standard + directOnly
+
+    static let caches: [CacheCategoryDefinition] = [
         .init(id: "xcode-derived-data", name: "Xcode Derived Data", displayPath: "~/Library/Developer/Xcode/DerivedData",
               scope: .contents(["Library/Developer/Xcode/DerivedData"]), safeDefault: true,
               warning: "Xcode rebuilds projects the next time they open.", blockingBundlePrefixes: xcode),

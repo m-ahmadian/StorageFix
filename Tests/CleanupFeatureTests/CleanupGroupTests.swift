@@ -6,15 +6,13 @@ import Testing
 struct CleanupGroupTests {
     @Test func `Given cleanup groups, when mapping categories, then every category appears exactly once`() {
         let mappedIDs = CleanupGroup.all.flatMap(\.categoryIDs)
-        let standardGroupsExpanded = CleanupGroup.all
-            .dropLast()
-            .allSatisfy { $0.isExpandedByDefault }
+        let collapsed = Set(CleanupGroup.all.filter { !$0.isExpandedByDefault }.map(\.id))
 
         #expect(mappedIDs.count == Set(mappedIDs).count)
         #expect(Set(mappedIDs) == expectedCategoryIDs)
         #expect(CleanupGroup.all.last?.id == "advanced")
         #expect(CleanupGroup.all.last?.isExpandedByDefault == false)
-        #expect(standardGroupsExpanded)
+        #expect(collapsed == ["ai-models", "advanced"])
     }
 
     @Test func `Given a scan report, when totaling a group, then current category sizes are used`() async throws {
@@ -93,12 +91,8 @@ private struct GroupMockCleanupService: CleanupServiceProtocol {
     func clean(categoryIDs: Set<String>) async throws -> CleanupReport { .groupFixture }
 }
 
-private let expectedCategoryIDs: Set<String> = [
-    "xcode-derived-data", "xcodebuildmcp-cache", "xcode-doc-cache",
-    "swiftpm-cache", "npm-cache", "node-gyp-cache",
-    "google-cache", "claude-cache", "adobe-cache", "codex-runtime-cache", "user-cache-files",
-    "app-logs", "simulator-contents", "ios-device-support"
-]
+/// Every category either edition can report must have a group, or it would be hidden.
+private let expectedCategoryIDs = Set(CacheCategoryCatalog.direct.map(\.id))
 
 private let selectableFixtureIDs: Set<String> = [
     "xcode-derived-data", "xcode-doc-cache", "simulator-contents"

@@ -3,6 +3,9 @@ import Foundation
 /// Measures and empties allow-listed cache folders. Never follows symbolic links and never removes the folder itself.
 struct CacheFileSystem: Sendable {
     let home: URL
+    var now: @Sendable () -> Date = { Date() }
+    /// Items changed this recently are never offered as leftovers; the app may be mid-reinstall or update.
+    static let leftoverQuietDays = 7
     private static let sizeKeys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
 
     /// Existing, non-symlinked folders a scope covers; a folder reached through a link is skipped entirely.
@@ -10,21 +13,45 @@ struct CacheFileSystem: Sendable {
         let paths: [String]
         switch scope {
         case .contents(let relative): paths = relative
-        case .childrenExcluding(let relative, _, _): paths = [relative]
+        case .childrenExcluding(let relative, _, _), .files(let relative, _, _): paths = [relative]
+        case .orphans(let relative): paths = relative
         }
         return paths.map { home.appending(path: $0, directoryHint: .isDirectory) }.filter(isSafeFolder)
     }
 
-    /// Entries that cleaning would remove for this scope.
-    func removableEntries(for scope: CacheCategoryDefinition.Scope) -> [URL] {
+    /// Entries that cleaning would remove for this scope. Leftovers are only listed when the installed apps are known.
+    func removableEntries(for scope: CacheCategoryDefinition.Scope, installed: InstalledApplicationIndex? = nil) -> [URL] {
         targets(for: scope).flatMap { folder -> [URL] in
-            let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-            guard case .childrenExcluding(_, let names, let prefixes) = scope else { return children }
-            return children.filter { child in
-                let name = child.lastPathComponent
-                return !names.contains(name) && !prefixes.contains { name.hasPrefix($0) }
+            let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey, .addedToDirectoryDateKey, .creationDateKey, .contentModificationDateKey]
+            let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? []
+            switch scope {
+            case .contents: return children
+            case .childrenExcluding(_, let names, let prefixes):
+                return children.filter { child in
+                    let name = child.lastPathComponent
+                    return !names.contains(name) && !prefixes.contains { name.hasPrefix($0) }
+                }
+            case .files(_, let extensions, let days):
+                return children.filter { child in
+                    guard extensions.contains(child.pathExtension.lowercased()),
+                          let values = try? child.resourceValues(forKeys: Set(keys)),
+                          values.isSymbolicLink != true, values.isRegularFile == true,
+                          let added = values.addedToDirectoryDate ?? values.creationDate else { return false }
+                    return isOlder(added, thanDays: days)
+                }
+            case .orphans:
+                guard let installed else { return [] }
+                return children.filter { child in
+                    guard let id = InstalledApplicationIndex.bundleID(forItemNamed: child.lastPathComponent), !installed.contains(id),
+                          let values = try? child.resourceValues(forKeys: Set(keys)), values.isSymbolicLink != true else { return false }
+                    return isOlder(values.contentModificationDate ?? .distantPast, thanDays: Self.leftoverQuietDays)
+                }
             }
         }
+    }
+
+    private func isOlder(_ date: Date, thanDays days: Int) -> Bool {
+        now().timeIntervalSince(date) > TimeInterval(days) * 86_400
     }
 
     func allocatedBytes(of entries: [URL]) throws -> Int64 {
@@ -36,14 +63,18 @@ struct CacheFileSystem: Sendable {
         return total
     }
 
-    /// Removes each entry after confirming it sits directly inside a safe target folder. Returns failed entries.
-    func remove(_ entries: [URL], within targets: [URL]) throws -> [URL] {
+    /// Removes (or moves to the Trash) each entry after confirming it sits directly inside a safe target folder.
+    /// Returns failed entries.
+    func remove(_ entries: [URL], within targets: [URL], toTrash: Bool = false) throws -> [URL] {
         let allowed = Set(targets.map { $0.standardizedFileURL.path })
         var failed: [URL] = []
         for entry in entries {
             try Task.checkCancellation()
             guard allowed.contains(entry.deletingLastPathComponent().standardizedFileURL.path) else { failed.append(entry); continue }
-            do { try FileManager.default.removeItem(at: entry) } catch { failed.append(entry) }
+            do {
+                if toTrash { try FileManager.default.trashItem(at: entry, resultingItemURL: nil) }
+                else { try FileManager.default.removeItem(at: entry) }
+            } catch { failed.append(entry) }
         }
         return failed
     }

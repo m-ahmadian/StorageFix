@@ -51,7 +51,7 @@ public final class WorkspaceViewModel: ObservableObject {
     private let defaults: UserDefaults
     private var subscriptions: Set<AnyCancellable> = []
     public init(cleanup: CleanupViewModel, duplicates: DuplicateViewModel, files: LargeFilesViewModel,
-                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil) {
+                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil, autoReviewFolder: URL? = nil) {
         self.scanComparison = scanComparison
         self.reviewQueue = reviewQueue
         self.includesDuplicateComparison = includesDuplicateComparison
@@ -72,6 +72,13 @@ public final class WorkspaceViewModel: ObservableObject {
         duplicates.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Moved") }.sink { [weak self] message in self?.record(title: "Duplicate copies", detail: message) }.store(in: &subscriptions)
         files.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Moved") }.sink { [weak self] message in self?.record(title: "File review", detail: message) }.store(in: &subscriptions)
         apps.$resultMessage.compactMap { $0 }.sink { [weak self] message in self?.record(title: "Application review", detail: message) }.store(in: &subscriptions)
+        // Once the Home folder is allowed, review a sensible folder without asking the person to pick one.
+        if let autoReviewFolder {
+            cleanup.$needsAccess.filter { !$0 }.first().sink { [weak self] _ in
+                guard let self, self.files.needsFolder else { return }
+                self.chooseReviewFolder(autoReviewFolder)
+            }.store(in: &subscriptions)
+        }
     }
     public func setDuplicateComparison(_ included: Bool) { if !isBusy { includesDuplicateComparison = included } }
     public var canReview: Bool { !isBusy && !files.needsFolder }
@@ -106,6 +113,19 @@ public final class WorkspaceViewModel: ObservableObject {
         guard canReview else { return }
         reviewTask = Task { await review() }
     }
+    /// First run in the sandbox: the one Allow click grants Home, then the review starts with no folder to pick.
+    /// Returns false when the chosen folder was not Home.
+    @discardableResult public func allowHomeAndReview(_ folder: URL) async -> Bool {
+        await cleanup.offerFolder(folder)
+        guard !cleanup.needsAccess else {
+            reviewMessage = "Click Allow with your Home folder selected so StorageFix can scan it."
+            return false
+        }
+        startReview()
+        return true
+    }
+    /// True when the first click should ask for the Home folder instead of starting a review.
+    public var needsHomeAllow: Bool { edition == .appStore && cleanup.needsAccess }
     /// Stops the review at once; a stage blocked on the filesystem is abandoned rather than awaited.
     public func stopReview() { reviewTask?.cancel(); reviewTask = nil }
 

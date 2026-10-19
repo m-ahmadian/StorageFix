@@ -39,6 +39,23 @@ public final class CleanupViewModel: ObservableObject {
         categories.reduce(0) { $0 + $1.bytesAfter }
     }
 
+    private var selectedCategories: [CleanupCategory] { categories.filter { selectedCategoryIDs.contains($0.id) } }
+
+    /// Explains what happens to the selection: caches are deleted, installers and leftovers go to the Trash.
+    public var confirmationSummary: String {
+        let trashes = selectedCategories.contains(where: \.movesToTrash)
+        let deletes = selectedCategories.contains { !$0.movesToTrash }
+        switch (deletes, trashes) {
+        case (true, true): return "Caches are permanently removed, bypassing Trash. Installers and app leftovers are moved to the Trash so you can restore them. Quit affected apps and read each warning first."
+        case (false, true): return "These items are moved to the Trash, so you can restore them. Empty the Trash afterwards to free the space."
+        default: return "Selected files are permanently removed, bypassing Trash. Quit affected apps and read each warning before continuing."
+        }
+    }
+
+    public var confirmationButtonTitle: String {
+        selectedCategories.allSatisfy(\.movesToTrash) ? "Move \(selectedSizeDescription) to Trash" : "Clean \(selectedSizeDescription)"
+    }
+
     public var selectedSizeDescription: String {
         sizeDescription(forByteCount: selectedBytes)
     }
@@ -200,10 +217,12 @@ public final class CleanupViewModel: ObservableObject {
             updateStorageSummary(with: report, isCleanup: true)
             selectedCategoryIDs.removeAll()
             let skipped = report.categories.filter { $0.status == .blocked || $0.status == .failed }
-            resultMessage = "Cleanup reclaimed \(reclaimedSpaceDescription)."
+            let trashed = report.categories.filter(\.movesToTrash).reduce(Int64(0)) { $0 + $1.bytesReclaimed }
+            let trashNote = trashed > 0 ? " \(sizeDescription(forByteCount: trashed)) moved to the Trash; empty it to free that space too." : ""
+            resultMessage = "Cleanup reclaimed \(reclaimedSpaceDescription).\(trashNote)"
             if !skipped.isEmpty {
                 errorMessage = skipped.map { "\($0.name): \($0.message)" }.joined(separator: "\n")
-                resultMessage = "Cleanup finished with \(skipped.count) skipped or failed categories. Reclaimed \(reclaimedSpaceDescription)."
+                resultMessage = "Cleanup finished with \(skipped.count) skipped or failed categories. Reclaimed \(reclaimedSpaceDescription).\(trashNote)"
             }
         }
     }

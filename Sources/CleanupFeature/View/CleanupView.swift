@@ -83,7 +83,7 @@ public struct CleanupView: View {
         .sheet(isPresented: $viewModel.showsConfirmation) {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Review cache cleanup").font(.title2.bold())
-                Text("Selected files are permanently removed, bypassing Trash. Quit affected apps and read each warning before continuing.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(viewModel.confirmationSummary).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         ForEach(viewModel.categories.filter { viewModel.selectedCategoryIDs.contains($0.id) }) { category in
@@ -91,6 +91,10 @@ public struct CleanupView: View {
                                 Text(category.name).font(.headline)
                                 Text(category.path).font(.caption).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                                 if !category.warning.isEmpty { Text(category.warning).font(.caption).foregroundStyle(.orange) .fixedSize(horizontal: false, vertical: true) }
+                                if !category.items.isEmpty {
+                                    Text(category.items.joined(separator: "\n")).font(.caption.monospaced()).textSelection(.enabled)
+                                        .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                             Divider()
                         }
@@ -99,7 +103,7 @@ public struct CleanupView: View {
                 HStack {
                     Button("Cancel") { viewModel.showsConfirmation = false }.keyboardShortcut(.cancelAction)
                     Spacer()
-                    Button("Permanently Clean \(viewModel.selectedSizeDescription)", role: .destructive) { Task { await viewModel.confirmCleanup() } }
+                    Button(viewModel.confirmationButtonTitle, role: .destructive) { Task { await viewModel.confirmCleanup() } }
                 }
             }.padding(28).frame(width: 640)
         }

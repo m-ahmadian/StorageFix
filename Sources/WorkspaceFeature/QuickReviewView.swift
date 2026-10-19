@@ -68,20 +68,33 @@ public struct QuickReviewView: View {
                     get: { vm.includesDuplicateComparison }, set: { vm.setDuplicateComparison($0) }))
                     .toggleStyle(.checkbox).disabled(vm.isBusy)
                 HStack(spacing: DesignSystem.Spacing.small) {
-                    Button(vm.lastReviewDate == nil ? "Start Review" : "Review Again", systemImage: "sparkles") {
-                        vm.startReview()
-                    }.buttonStyle(PrimaryButtonStyle()).disabled(!vm.canReview)
+                    if vm.needsHomeAllow {
+                        Button("Scan My Mac", systemImage: "sparkles") { allowAndReview() }
+                            .buttonStyle(PrimaryButtonStyle()).disabled(vm.isBusy)
+                    } else {
+                        Button(vm.lastReviewDate == nil ? "Start Review" : "Review Again", systemImage: "sparkles") {
+                            vm.startReview()
+                        }.buttonStyle(PrimaryButtonStyle()).disabled(!vm.canReview)
+                    }
                     Button("Choose Folder…", systemImage: "folder") {
                         if let folder = FolderPicker.choose(access: folderAccess) { vm.chooseReviewFolder(folder) }
                     }.disabled(vm.isBusy)
                 }
-                Text(vm.files.needsFolder ? "Choose a folder to begin; access stays under your control." : "Folder review: \(vm.files.scope.path)")
+                Text(vm.needsHomeAllow ? "macOS asks once: click Allow and StorageFix scans caches, old installers and Downloads. Nothing is removed until you confirm."
+                     : vm.files.needsFolder ? "Choose a folder to begin; access stays under your control." : "Folder review: \(vm.files.scope.path)")
                     .font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             }
             Spacer(minLength: DesignSystem.Spacing.none)
             diskSummary.frame(width: DesignSystem.Size.reviewDiskWidth)
         }.padding(DesignSystem.Spacing.large).workspaceCard()
+    }
+
+    /// The panel opens on Home, so a single Allow click grants it; the review then starts by itself.
+    private func allowAndReview() {
+        guard let folder = FolderPicker.choose(access: folderAccess, startingAt: vm.cleanup.requiredFolder,
+            message: "Click Allow to let StorageFix scan your Mac for junk. Nothing is removed until you confirm.", prompt: "Allow") else { return }
+        Task { if await vm.allowHomeAndReview(folder) { folderAccess?.remember(folder) } }
     }
 
     private var progress: some View {
