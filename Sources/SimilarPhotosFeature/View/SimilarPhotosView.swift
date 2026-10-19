@@ -19,6 +19,7 @@ public struct SimilarPhotosView: View {
             if !viewModel.groups.isEmpty { footer }
         }
         .padding(DesignSystem.Spacing.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DesignSystem.Colors.background)
         .sheet(isPresented: $viewModel.showsConfirmation) { confirmation }
         .onDisappear { scanTask?.cancel() }
@@ -55,12 +56,18 @@ public struct SimilarPhotosView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if viewModel.hasScanned && viewModel.groups.isEmpty {
+        if viewModel.hasScanned && viewModel.analyzedCount == 0 {
+            ContentUnavailableView("No photos in this folder", systemImage: "photo.on.rectangle",
+                description: Text("Pictures kept inside the Photos app are not scanned. Choose a folder with image files, such as Desktop, Downloads or a camera import folder."))
+                .frame(maxHeight: .infinity)
+        } else if viewModel.hasScanned && viewModel.groups.isEmpty {
             ContentUnavailableView("No similar photos", systemImage: "photo.on.rectangle",
                 description: Text("Compared \(viewModel.analyzedCount) photos. Nothing looks alike."))
+                .frame(maxHeight: .infinity)
         } else if !viewModel.hasScanned && !viewModel.isLoading {
             ContentUnavailableView("Find look-alike photos", systemImage: "photo.on.rectangle.angled",
                 description: Text("Photos are compared on this Mac with Apple's image analysis. Your Photos library is not touched."))
+                .frame(maxHeight: .infinity)
         } else {
             ScrollView {
                 LazyVStack(spacing: DesignSystem.Spacing.medium) {
