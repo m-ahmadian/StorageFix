@@ -10,7 +10,6 @@ public struct QuickReviewView: View {
     private let select: (WorkspaceSection) -> Void
     @State private var showsReport = false
     @State private var showsAllActivity = false
-    @State private var reviewTask: Task<Void, Never>?
 
     public init(viewModel: WorkspaceViewModel, select: @escaping (WorkspaceSection) -> Void) {
         vm = viewModel
@@ -70,7 +69,7 @@ public struct QuickReviewView: View {
                     .toggleStyle(.checkbox).disabled(vm.isBusy)
                 HStack(spacing: DesignSystem.Spacing.small) {
                     Button(vm.lastReviewDate == nil ? "Start Review" : "Review Again", systemImage: "sparkles") {
-                        reviewTask = Task { await vm.review() }
+                        vm.startReview()
                     }.buttonStyle(PrimaryButtonStyle()).disabled(!vm.canReview)
                     Button("Choose Folder…", systemImage: "folder") {
                         if let folder = FolderPicker.choose(access: folderAccess) { vm.chooseReviewFolder(folder) }
@@ -98,7 +97,7 @@ public struct QuickReviewView: View {
             Spacer()
             Text("\(vm.completedSteps) of \(vm.reviewStageCount) completed").font(.caption)
                 .foregroundStyle(DesignSystem.Colors.secondaryText)
-            Button("Cancel") { reviewTask?.cancel() }
+            Button("Cancel") { vm.stopReview() }
         }.padding(DesignSystem.Spacing.medium).workspaceCard()
     }
 
@@ -129,7 +128,7 @@ public struct QuickReviewView: View {
 
     /// One click from a finished review to the cleanup confirmation sheet.
     @ViewBuilder private var cleanNowCard: some View {
-        if vm.cleanup.hasScanned, vm.cleanup.selectedBytes > 0, !vm.isBusy {
+        if vm.cleanup.hasScanned, vm.cleanup.selectedBytes > 0, !vm.cleanup.isLoading, vm.reviewQueue?.isExecuting != true {
             HStack(spacing: DesignSystem.Spacing.medium) {
                 IconBadge("leaf", color: DesignSystem.Colors.accent)
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {

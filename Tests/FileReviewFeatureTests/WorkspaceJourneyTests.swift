@@ -71,11 +71,11 @@ struct WorkspaceJourneyTests {
     }
 }
 @MainActor
-func fixtureWorkspace(failApps: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, queue: ReviewQueueViewModel? = nil, comparison: ScanComparisonViewModel? = nil) -> WorkspaceViewModel {
+func fixtureWorkspace(failApps: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, queue: ReviewQueueViewModel? = nil, comparison: ScanComparisonViewModel? = nil, fileService: (any FileBrowserServiceProtocol)? = nil) -> WorkspaceViewModel {
     let defaults = UserDefaults(suiteName: "StorageFixFixture-\(UUID().uuidString)")!
     return WorkspaceViewModel(cleanup: CleanupViewModel(service: FixtureCleanupService()),
         duplicates: DuplicateViewModel(service: FixtureDuplicateService(), scopeDescription: "/fixture"),
-        files: LargeFilesViewModel(scope: URL(fileURLWithPath: "/fixture"), service: FixtureFileService()),
+        files: LargeFilesViewModel(scope: URL(fileURLWithPath: "/fixture"), service: fileService ?? FixtureFileService()),
         map: StorageMapViewModel(root: URL(fileURLWithPath: "/fixture"), service: FixtureFileService()), apps: ApplicationsViewModel(service: FixtureApplicationService(failScan: failApps)), defaults: defaults, edition: .direct, includesDuplicateComparison: true, volumeService: volumeService, reviewQueue: queue, scanComparison: comparison)
 }
 struct FixtureCleanupService: CleanupServiceProtocol {

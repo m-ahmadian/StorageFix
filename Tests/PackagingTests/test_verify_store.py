@@ -64,7 +64,7 @@ class StoreVerificationTests(unittest.TestCase):
                 verify.prepare_entitlements(Path("synthetic-profile"), output)
             entitlements = verify.read_plist(output)
             verify.check_entitlements(entitlements)
-            self.assertEqual(len(entitlements), 4)
+            self.assertEqual(len(entitlements), len(verify.REQUIRED_ENTITLEMENTS) + 2)
             self.assertEqual(entitlements["com.apple.developer.team-identifier"], "TEAM")
 
     def test_development_and_developer_id_profiles_are_rejected(self):

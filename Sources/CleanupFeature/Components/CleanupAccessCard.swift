@@ -11,10 +11,10 @@ struct CleanupAccessCard: View {
             IconBadge("lock.open", color: DesignSystem.Colors.accent)
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.small) {
                 Text("Allow cache cleanup").font(.headline)
-                Text("macOS keeps apps out of your Library unless you allow it. Choose your Home folder\(homeName) and StorageFix will measure only known, rebuildable caches. Nothing is removed until you review and confirm. Access ends when you quit.")
+                Text("macOS asks once before an App Store app can look inside your Library. Click Allow\(homeName) and StorageFix measures known, rebuildable caches. Nothing is removed until you review and confirm. You won't be asked again.")
                     .font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Choose Home Folder…", systemImage: "house") { choose() }
+                Button("Allow Cache Scan…", systemImage: "lock.open") { choose() }
                     .buttonStyle(PrimaryButtonStyle()).disabled(viewModel.isLoading)
             }
             Spacer(minLength: DesignSystem.Spacing.none)
@@ -25,8 +25,12 @@ struct CleanupAccessCard: View {
     private var homeName: String { viewModel.requiredFolder.map { " (\($0.path))" } ?? "" }
 
     private func choose() {
-        guard let folder = FolderPicker.choose(access: folderAccess, startingAt: viewModel.requiredFolder?.deletingLastPathComponent(),
-            message: "Select your Home folder\(homeName) to allow cache cleanup.", prompt: "Allow") else { return }
-        Task { await viewModel.grantAccess(to: folder) }
+        // The panel opens on Home itself, so clicking Allow grants it with no further navigation.
+        guard let folder = FolderPicker.choose(access: folderAccess, startingAt: viewModel.requiredFolder,
+            message: "Click Allow to let StorageFix scan caches in your Home folder\(homeName).", prompt: "Allow") else { return }
+        Task {
+            await viewModel.grantAccess(to: folder)
+            if !viewModel.needsAccess { folderAccess?.remember(folder) }
+        }
     }
 }

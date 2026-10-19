@@ -14,9 +14,9 @@ struct ReviewReportTests {
         let vm = fixtureWorkspace()
         await vm.review()
         let report = try #require(vm.latestReport)
-        #expect(report.areas.map(\.section) == [.files, .duplicates, .apps, .cleanup])
-        #expect(report.areas.map(\.bytes) == [160_000_000, 12_000_000, 120_000_000, 3_400_000_000])
-        #expect(report.areas.map(\.itemCount) == [3, 1, 1, 1])
+        #expect(report.areas.map(\.section) == [.cleanup, .files, .duplicates, .apps])
+        #expect(report.areas.map(\.bytes) == [3_400_000_000, 160_000_000, 12_000_000, 120_000_000])
+        #expect(report.areas.map(\.itemCount) == [1, 3, 1, 1])
         #expect(report.folder == "/fixture")
         #expect(report.needsAttention == false)
         #expect(report.text.contains("not a total of reclaimable space"))
@@ -29,7 +29,7 @@ struct ReviewReportTests {
         let app = try #require(report.areas.first { $0.section == .apps })
         #expect(report.needsAttention)
         #expect(app.error != nil && app.bytes == nil && app.itemCount == nil)
-        #expect(report.areas.first?.bytes == 160_000_000)
+        #expect(report.areas.first { $0.section == .files }?.bytes == 160_000_000)
         #expect(report.text.contains("Attention:"))
     }
 
@@ -63,7 +63,7 @@ struct ReviewReportTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let task = Task { await vm.review() }
         await service.waitUntilScanning()
-        #expect(vm.isReviewing && vm.latestReport == nil && vm.completedSteps == 0)
+        #expect(vm.isReviewing && vm.latestReport == nil && vm.completedSteps == 1)  // caches finished first
         #expect(vm.canReview == false)
         vm.select(.apps)
         #expect(vm.selectedSection == .overview)

@@ -12,6 +12,8 @@ BUNDLE_ID = "com.mehrdad.storagefix"
 REQUIRED_ENTITLEMENTS = {
     "com.apple.security.app-sandbox": True,
     "com.apple.security.files.user-selected.read-write": True,
+    # Remembers the one-time Home grant for cache cleanup (owner decision, October 18, 2026).
+    "com.apple.security.files.bookmarks.app-scope": True,
 }
 OPTIONAL_ENTITLEMENTS = {
     "com.apple.application-identifier", "com.apple.developer.team-identifier",
