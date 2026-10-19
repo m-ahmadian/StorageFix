@@ -32,6 +32,7 @@ import Testing
         let blocked = ApplicationsViewModel(service: FixtureApplicationService(), permitsRemoval: true, related: related,
                                             runningBundleIDs: { [app.bundleIdentifier] })
         await blocked.scan(); await blocked.review(app); await blocked.moveToTrash()
-        #expect(blocked.errorMessage?.contains("Quit") == true && blocked.applications.contains(app) && (await related.trashed).isEmpty)
+        let trashed = await related.trashed
+        #expect(blocked.errorMessage?.contains("Quit") == true && blocked.applications.contains(app) && trashed.isEmpty)
     }
 }
