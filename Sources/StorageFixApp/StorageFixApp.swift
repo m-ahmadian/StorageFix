@@ -9,13 +9,14 @@ struct StorageFixApp: App {
     private let folderAccess: FolderAccessSession
     @State private var showsPrivacy = false
     @StateObject private var workspace: WorkspaceViewModel
-    @StateObject private var freeSpace = FreeSpaceMonitor(read: FreeSpaceMonitor.volume(at: UserHome.real))
-    @AppStorage("storagefix.menuBar.visible") private var showsMenuBar = true
+    private let freeSpace: FreeSpaceMonitor
+    @AppStorage(StatusItemController.visibilityKey) private var showsMenuBar = true
     init() {
         let script = Bundle.main.url(forResource: "storage-fix", withExtension: "sh")
             ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appending(path: "Scripts/storage-fix.sh")
         let access = FolderAccessSession()
         folderAccess = access
+        freeSpace = FreeSpaceMonitor(read: FreeSpaceMonitor.volume(at: UserHome.real))
         let remembered = access.restoreRemembered()
         _workspace = StateObject(wrappedValue: WorkspaceAssembly.make(scriptURL: script, rememberedFolders: remembered))
     }
@@ -28,7 +29,9 @@ struct StorageFixApp: App {
     }
     var body: some Scene {
         WindowGroup(id: "main") {
-            WorkspaceView(viewModel: workspace).environment(\.folderAccessSession, folderAccess).sheet(isPresented: $showsPrivacy) {
+            WorkspaceView(viewModel: workspace).environment(\.folderAccessSession, folderAccess)
+                .background(StatusItemInstaller(monitor: freeSpace, workspace: workspace, folderAccess: folderAccess))
+                .sheet(isPresented: $showsPrivacy) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("Privacy & your files").font(.title2.bold())
                     ScrollView { Text(privacyText).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
@@ -52,13 +55,5 @@ struct StorageFixApp: App {
                     }
                 }
             }
-        MenuBarExtra(isInserted: $showsMenuBar) {
-            FreeSpaceMenuView(monitor: freeSpace, workspace: workspace) { showsMenuBar = false }
-                .environment(\.folderAccessSession, folderAccess)
-        } label: {
-            Image(systemName: freeSpace.isLow ? "externaldrive.badge.exclamationmark" : "internaldrive")
-            Text(freeSpace.title)
-        }
-        .menuBarExtraStyle(.window)
     }
 }

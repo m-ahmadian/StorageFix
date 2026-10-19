@@ -1,0 +1,25 @@
+name: Launch check
+# Launches the built app and fails if it is still busy after start-up (for example a SwiftUI redraw loop).
+on:
+  push:
+    branches: [main, "claude/**"]
+jobs:
+  launch:
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and launch the direct edition, then measure idle CPU
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build.log 2>&1 || { tail -30 /tmp/build.log; exit 1; }
+          open dist/StorageFix.app; sleep 25
+          pid=$(pgrep -x StorageFix | head -1 || true)
+          [ -n "$pid" ] || { echo "::error title=Launch check::StorageFix is not running after launch"; exit 1; }
+          sleep 5; cpu=$(ps -o %cpu= -p "$pid" | tr -d ' ')
+          echo "::notice title=Launch check::idle CPU ${cpu}%"
+          kill "$pid" || true
+          awk -v c="$cpu" 'BEGIN { exit (c > 50) }' || { echo "::error title=Launch check::StorageFix uses ${cpu}% CPU while idle"; exit 1; }

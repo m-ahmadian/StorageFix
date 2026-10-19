@@ -56,7 +56,7 @@ public struct WorkspaceView: View {
             if vm.scanComparison != nil { navigation(.comparison, key: "9") }
             heading("STORAGE").padding(.top, 20)
             if vm.supportsCleanup { navigation(.cleanup, key: "2") }; navigation(.map, key: "3"); navigation(.duplicates, key: "4")
-            if vm.photos != nil { navigation(.photos, key: "0") }
+            if vm.photos != nil { navigation(.photos, key: nil) }
             navigation(.files, key: "5")
             heading("MAC CARE").padding(.top, 20)
             navigation(.apps, key: "6"); navigation(.safety, key: "7")
@@ -72,13 +72,16 @@ public struct WorkspaceView: View {
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 10, weight: .semibold)).tracking(1.8).foregroundStyle(.white.opacity(0.65)).padding(.horizontal, 24).padding(.bottom, 4)
     }
-    private func navigation(_ item: WorkspaceSection, key: KeyEquivalent) -> some View {
+    @ViewBuilder private func navigation(_ item: WorkspaceSection, key: KeyEquivalent?) -> some View {
+        if let key { navigationButton(item).keyboardShortcut(key, modifiers: .command) } else { navigationButton(item) }
+    }
+    private func navigationButton(_ item: WorkspaceSection) -> some View {
         Button { vm.select(item) } label: {
             HStack(spacing: 12) { Image(systemName: item.symbol).frame(width: 20).accessibilityHidden(true); Text(vm.navigationTitle(item)).font(.system(size: 13, weight: vm.selectedSection == item ? .semibold : .regular)); Spacer() }
                 .foregroundStyle(vm.selectedSection == item ? Color.white : .white.opacity(0.65))
                 .padding(.horizontal, 14).padding(.vertical, 12)
                 .background(vm.selectedSection == item ? Color.white.opacity(0.10) : .clear).clipShape(RoundedRectangle(cornerRadius: 10))
-        }.buttonStyle(.plain).padding(.horizontal, 12).keyboardShortcut(key, modifiers: .command)
+        }.buttonStyle(.plain).padding(.horizontal, 12)
             .disabled(vm.isReviewing || vm.reviewQueue?.isExecuting == true).accessibilityValue(vm.selectedSection == item ? "Current section" : "")
     }
 }
