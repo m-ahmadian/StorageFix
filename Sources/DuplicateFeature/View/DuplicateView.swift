@@ -13,7 +13,6 @@ public struct DuplicateView: View {
     @ObservedObject private var vm: DuplicateViewModel
     @State private var sort: Sort = .size
     @State private var query = ""
-    @State private var scanTask: Task<Void, Never>?
     public init(viewModel: DuplicateViewModel) { vm = viewModel }
 
     public var body: some View {
@@ -25,9 +24,13 @@ public struct DuplicateView: View {
                 }
                 Spacer()
                 Button("Choose Folder…", systemImage: "folder") { chooseFolder() }.disabled(vm.isLoading || vm.isQueueBusy)
-                Button(vm.hasScanned ? "Rescan" : "Scan", systemImage: "arrow.clockwise") {
-                    scanTask = Task { await vm.scan() }
-                }.disabled(vm.isLoading || vm.isQueueBusy || vm.needsFolder).keyboardShortcut("r", modifiers: .command)
+                if vm.isScanning {
+                    Button("Cancel Scan", systemImage: "xmark.circle") { vm.cancelScan() }
+                } else {
+                    Button(vm.hasScanned ? "Rescan" : "Scan", systemImage: "arrow.clockwise") { vm.startScan() }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(vm.isLoading || vm.isQueueBusy || vm.needsFolder).keyboardShortcut("r", modifiers: .command)
+                }
             }
             Label(vm.scopeDescription, systemImage: "folder").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             HStack(spacing: 24) {
@@ -36,14 +39,7 @@ public struct DuplicateView: View {
                 Spacer()
                 Text(vm.selectedBytes > 0 ? ByteCountFormatter.string(fromByteCount: vm.selectedBytes, countStyle: .file) : "Nothing selected").font(.title2.bold())
             }.padding(20).workspaceCard()
-            if vm.isLoading {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text(vm.isRemoving ? "Checking files and moving copies to Trash…" : "Reading and comparing file contents…")
-                    Spacer()
-                    if !vm.isRemoving { Button("Cancel") { scanTask?.cancel() } }
-                }.padding(.vertical, 8)
-            }
+            if vm.isLoading { ScanProgressRow(progress: vm.progress, isRemoving: vm.isRemoving) }
             if let error = vm.errorMessage { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).textSelection(.enabled) }
             if let result = vm.resultMessage { Label(result, systemImage: "info.circle").foregroundStyle(.secondary) }
             if let result = vm.queueAddResult { QueueAddResultView(result: result) }
@@ -75,7 +71,11 @@ public struct DuplicateView: View {
                     Text("Trash is reversible until you empty it in Finder.").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(vm.usesReviewQueue ? "Add to Review Queue" : "Review \(vm.selectedPaths.count) Copies", systemImage: vm.usesReviewQueue ? "tray.badge.plus" : "trash", action: vm.reviewSelected)
+                if vm.usesReviewQueue {
+                    Button("Add to Review Queue", systemImage: "tray.badge.plus", action: vm.reviewSelected)
+                        .disabled(vm.selectedPaths.isEmpty || vm.isLoading || vm.isQueueBusy)
+                }
+                Button("Move \(vm.selectedPaths.count) to Trash…", systemImage: "trash", action: vm.requestTrash)
                     .buttonStyle(PrimaryButtonStyle()).disabled(vm.selectedPaths.isEmpty || vm.isLoading || vm.isQueueBusy)
             }.padding(16).workspaceCard()
         }.padding(28)
@@ -104,7 +104,6 @@ public struct DuplicateView: View {
                 }
             }.padding(28).frame(width: 640)
         }
-        .onDisappear { if !vm.isRemoving { scanTask?.cancel() } }
     }
 
     private var visibleGroups: [DuplicateGroup] {

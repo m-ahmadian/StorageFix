@@ -240,7 +240,7 @@ public struct QuickReviewView: View {
                     Text("Review").font(.caption.weight(.semibold))
                 }
             }.padding(DesignSystem.Spacing.large).frame(maxWidth: .infinity, alignment: .leading).workspaceCard()
-        }.buttonStyle(.plain).disabled(vm.isReviewing)
+        }.buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             .accessibilityHint("Open \(title) to review details")
     }
@@ -256,6 +256,6 @@ public struct QuickReviewView: View {
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption).accessibilityHidden(true)
             }.padding(DesignSystem.Spacing.medium).workspaceCard()
-        }.buttonStyle(.plain).disabled(vm.isReviewing)
+        }.buttonStyle(.plain)
     }
 }

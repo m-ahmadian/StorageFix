@@ -6,7 +6,6 @@ import SwiftUI
 public struct SimilarPhotosView: View {
     @ObservedObject private var viewModel: SimilarPhotosViewModel
     @Environment(\.folderAccessSession) private var folderAccess
-    @State private var scanTask: Task<Void, Never>?
     public init(viewModel: SimilarPhotosViewModel) { self.viewModel = viewModel }
 
     public var body: some View {
@@ -22,7 +21,6 @@ public struct SimilarPhotosView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DesignSystem.Colors.background)
         .sheet(isPresented: $viewModel.showsConfirmation) { confirmation }
-        .onDisappear { scanTask?.cancel() }
     }
 
     private var header: some View {
@@ -39,10 +37,10 @@ public struct SimilarPhotosView: View {
                 if let folder = FolderPicker.choose(access: folderAccess) { viewModel.chooseFolder(folder) }
             }.disabled(viewModel.isLoading)
             if viewModel.isLoading && viewModel.progress != nil {
-                Button("Cancel") { scanTask?.cancel() }
+                Button("Cancel Scan") { viewModel.cancelScan() }
             } else {
                 Button(viewModel.hasScanned ? "Scan Again" : "Find Similar Photos", systemImage: "photo.on.rectangle.angled") {
-                    scanTask = Task { await viewModel.scan() }
+                    viewModel.startScan()
                 }.buttonStyle(PrimaryButtonStyle()).disabled(viewModel.needsFolder || viewModel.isLoading)
             }
         }

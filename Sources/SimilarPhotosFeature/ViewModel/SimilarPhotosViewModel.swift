@@ -17,6 +17,8 @@ public final class SimilarPhotosViewModel: ObservableObject {
     @Published public private(set) var folder: URL?
     @Published public var showsConfirmation = false
     private let service: any SimilarPhotoServiceProtocol
+    /// Owned here so a scan keeps running while the person looks at other screens.
+    private var scanTask: Task<Void, Never>?
     private let byteFormatter: ByteCountFormatter = { let f = ByteCountFormatter(); f.countStyle = .file; return f }()
 
     public init(service: any SimilarPhotoServiceProtocol, folder: URL? = nil) {
@@ -37,6 +39,12 @@ public final class SimilarPhotosViewModel: ObservableObject {
 
     /// Uses a folder only when none was chosen yet (for example Pictures once Home access is allowed).
     public func offerDefaultFolder(_ folder: URL) { if self.folder == nil { chooseFolder(folder) } }
+
+    public func startScan() {
+        guard !isLoading, folder != nil else { return }
+        scanTask = Task { [weak self] in await self?.scan() }
+    }
+    public func cancelScan() { scanTask?.cancel(); scanTask = nil }
 
     public func scan() async {
         guard !isLoading else { return }

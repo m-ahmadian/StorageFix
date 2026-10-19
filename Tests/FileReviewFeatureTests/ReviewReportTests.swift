@@ -66,7 +66,8 @@ struct ReviewReportTests {
         #expect(vm.isReviewing && vm.latestReport == nil && vm.completedSteps == 1)  // caches finished first
         #expect(vm.canReview == false)
         vm.select(.apps)
-        #expect(vm.selectedSection == .overview)
+        #expect(vm.selectedSection == .apps && vm.isReviewing)   // moving around never stops the review
+        vm.select(.overview)
         if cancel { task.cancel() }
         await service.resume()
         await task.value
