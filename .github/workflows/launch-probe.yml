@@ -1,0 +1,30 @@
+name: Launch probe
+on:
+  push:
+    branches: ["claude/launch-probe"]
+jobs:
+  probe:
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build Store and direct apps
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build1.log 2>&1 || { tail -40 /tmp/build1.log; exit 1; }
+          SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh > /tmp/build2.log 2>&1 || { tail -40 /tmp/build2.log; exit 1; }
+      - name: Launch each edition and sample the main thread
+        run: |
+          for app in dist/StorageFix.app dist/AppStore/StorageFix.app; do
+            open "$app"; sleep 20
+            pid=$(pgrep -x StorageFix | head -1)
+            if [ -z "$pid" ]; then echo "::error title=$app::not running"; continue; fi
+            sample "$pid" 3 -file /tmp/sample.txt >/dev/null 2>&1 || true
+            main=$(awk '/Thread_[0-9]+.*DispatchQueue_1: com.apple.main-thread/{f=1} f{print} /^ *$/{if(f)exit}' /tmp/sample.txt | head -60 | sed 's/^[ +!:|]*//' | cut -c1-140)
+            echo "::notice title=main thread $app::$(echo "$main" | tr '\n' '~' | sed 's/~/%0A/g')"
+            cpu=$(ps -o %cpu= -p "$pid"); echo "::notice title=cpu $app::$cpu"
+            kill "$pid"; sleep 3
+          done
