@@ -14,7 +14,7 @@ struct CleanupActionsView: View {
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
                     Text("\(selectedSize) selected")
                         .font(.headline)
-                    Text("Selected files are permanently removed. Review optional data warnings.")
+                    Text("Caches are permanently removed; installers and app leftovers go to the Trash. Review each warning.")
                         .font(.caption)
                         .foregroundStyle(DesignSystem.Colors.secondaryText)
                 }

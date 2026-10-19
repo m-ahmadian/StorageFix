@@ -29,15 +29,16 @@ import WorkspaceFeature
         let queue = ReviewQueue(policy: policy, operations: ReviewFileOperations(policy: policy), volumes: volumes)
         let applications = store ? [] : [URL(fileURLWithPath: "/Applications"), home.appending(path: "Applications")]
         return WorkspaceViewModel(
-            cleanup: CleanupViewModel(service: store
-                ? NativeCacheCleanupService(home: realHome, requiresGrant: !homeRemembered) as any CleanupServiceProtocol
-                : ScriptCleanupService(scriptURL: scriptURL)),
+            // One Swift engine for both editions; only the direct one may also erase simulators.
+            cleanup: CleanupViewModel(service: NativeCacheCleanupService(home: realHome, requiresGrant: store && !homeRemembered,
+                catalog: store ? CacheCategoryCatalog.standard : CacheCategoryCatalog.direct)),
             duplicates: DuplicateViewModel(service: FileSystemDuplicateService(roots: [downloads]),
                 scopeDescription: store ? "Choose a folder" : downloads.path, requiresFolderSelection: store, queue: queue, presenter: presenter),
             files: LargeFilesViewModel(scope: downloads, service: FileBrowserService(inventoryService: inventory), requiresFolderSelection: store, queue: queue),
             map: StorageMapViewModel(root: downloads, service: inventory, requiresFolderSelection: store, presenter: presenter, queue: queue, comparisonSession: comparisonSession),
             apps: ApplicationsViewModel(service: ApplicationService(roots: applications, permitsRemoval: !store),
                 permitsRemoval: !store, requiresFolderSelection: store),
-            volumeService: volumes, reviewQueue: ReviewQueueViewModel(queue: queue, presenter: presenter, reportService: QueueReportService()), scanComparison: comparison)
+            volumeService: volumes, reviewQueue: ReviewQueueViewModel(queue: queue, presenter: presenter, reportService: QueueReportService()), scanComparison: comparison,
+            autoReviewFolder: store ? realHome.appending(path: "Downloads", directoryHint: .isDirectory) : nil)
     }
 }

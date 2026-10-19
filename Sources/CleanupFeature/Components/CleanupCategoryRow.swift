@@ -22,10 +22,14 @@ struct CleanupCategoryRow: View {
                         Label(category.message, systemImage: "exclamationmark.triangle")
                             .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(category.path)
+                    Text(category.items.isEmpty ? category.path : itemSummary)
                         .font(.caption)
                         .foregroundStyle(DesignSystem.Colors.secondaryText)
                         .lineLimit(1)
+                        .help(category.items.joined(separator: "\n"))
+                    if category.movesToTrash {
+                        Label("Moves to Trash", systemImage: "trash").font(.caption2).foregroundStyle(DesignSystem.Colors.secondaryText)
+                    }
                 }
                 Spacer()
                 if category.warning.isEmpty == false {
@@ -50,15 +54,24 @@ struct CleanupCategoryRow: View {
 
     private var symbolName: String {
         switch category.id {
-        case "xcode-derived-data", "xcode-doc-cache", "ios-device-support": "hammer"
+        case "xcode-derived-data", "xcode-doc-cache", "ios-device-support", "xcode-previews", "xcode-archives": "hammer"
         case "xcodebuildmcp-cache": "wrench.and.screwdriver"
-        case "swiftpm-cache", "npm-cache", "node-gyp-cache": "shippingbox"
-        case "google-cache", "claude-cache", "adobe-cache", "codex-runtime-cache": "app"
+        case "swiftpm-cache", "npm-cache", "node-gyp-cache", "gradle-cache", "cargo-cache", "bun-cache", "maven-repository", "cocoapods-repos": "shippingbox"
+        case "google-cache", "claude-cache", "adobe-cache", "codex-runtime-cache", "adobe-media-cache": "app"
         case "user-cache-files": "folder.badge.gearshape"
         case "app-logs": "doc.text"
-        case "simulator-contents": "iphone"
+        case "simulator-contents", "simulator-caches", "ios-software-updates": "iphone"
+        case "old-installers": "shippingbox.and.arrow.backward"
+        case "app-leftovers": "app.dashed"
+        case "ollama-models", "huggingface-cache", "lmstudio-models": "cpu"
         default: "folder"
         }
+    }
+
+    private var itemSummary: String {
+        let shown = category.items.prefix(3).joined(separator: ", ")
+        let more = category.items.count - 3
+        return more > 0 ? "\(shown) and \(more) more" : shown
     }
 
     private var helpText: String {
