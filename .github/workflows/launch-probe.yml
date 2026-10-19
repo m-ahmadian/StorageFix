@@ -13,11 +13,14 @@ jobs:
       - uses: actions/checkout@v5
       - name: Build Store and direct apps
         run: |
+          set +e
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build1.log 2>&1 || { tail -40 /tmp/build1.log; exit 1; }
-          SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh > /tmp/build2.log 2>&1 || { tail -40 /tmp/build2.log; exit 1; }
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build1.log 2>&1; echo "::notice title=direct build::exit $?%0A$(tail -8 /tmp/build1.log | tr '\n' '~' | sed 's/~/%0A/g')"
+          SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh > /tmp/build2.log 2>&1; echo "::notice title=store build::exit $?%0A$(tail -8 /tmp/build2.log | tr '\n' '~' | sed 's/~/%0A/g')"
+          ls -d dist/*.app dist/AppStore/*.app
       - name: Launch each edition and sample the main thread
         run: |
+          set +e
           for app in dist/StorageFix.app dist/AppStore/StorageFix.app; do
             open "$app"; sleep 20
             pid=$(pgrep -x StorageFix | head -1)
