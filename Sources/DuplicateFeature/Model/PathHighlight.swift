@@ -7,13 +7,25 @@ struct PathHighlight: Equatable {
     let distinct: String
 
     static func make(for path: String, among paths: [String]) -> PathHighlight {
-        let folders = paths.map { directoryComponents($0) }
-        let own = directoryComponents(path)
-        var common = 0
-        while let first = folders.first, common < first.count,
-              folders.allSatisfy({ $0.count > common && $0[common] == first[common] }) {
-            common += 1
+        make(for: path, commonFolderCount: commonFolderCount(paths))
+    }
+
+    /// Number of leading folders every path shares. Compute once per group: O(paths × depth).
+    static func commonFolderCount(_ paths: [String]) -> Int {
+        guard let first = paths.first.map(directoryComponents) else { return 0 }
+        var common = first.count
+        for path in paths.dropFirst() {
+            let folders = directoryComponents(path)
+            var index = 0
+            while index < min(common, folders.count), folders[index] == first[index] { index += 1 }
+            common = index
+            if common == 0 { break }
         }
+        return common
+    }
+
+    static func make(for path: String, commonFolderCount common: Int) -> PathHighlight {
+        let own = directoryComponents(path)
         let sharedPart = own.prefix(common).joined(separator: "/")
         let distinctPart = own.dropFirst(common).joined(separator: "/")
         let prefix = path.hasPrefix("/") ? "/" : ""

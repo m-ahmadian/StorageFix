@@ -56,7 +56,7 @@ public actor VisionSimilarPhotoService: SimilarPhotoServiceProtocol {
         var result: [Candidate] = []
         for case let url as URL in enumerator {
             try Task.checkCancellation()
-            guard imageExtensions.contains(url.pathExtension.lowercased()),
+            guard imageExtensions.contains(url.pathExtension.lowercased()), !ReviewExclusions.excludes(url.path),
                   let values = try? url.resourceValues(forKeys: Set(keys)), values.isRegularFile == true, values.isSymbolicLink != true,
                   let size = values.fileSize, size > 0 else { continue }
             result.append(Candidate(url: url, bytes: Int64(size), modifiedAt: values.contentModificationDate))

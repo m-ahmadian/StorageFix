@@ -51,7 +51,7 @@ public actor FileSystemDuplicateService: DuplicateServiceProtocol {
 
     private static func groups(in roots: [URL], progress: @Sendable (DuplicateScanProgress) -> Void) throws -> [DuplicateGroup] {
         progress(DuplicateScanProgress(phase: .listing, completed: 0, total: 0))
-        let inventory = try FileInventory.files(in: roots)
+        let inventory = try FileInventory.files(in: roots).filter { !ReviewExclusions.excludes($0.path) }
         let candidates = Dictionary(grouping: inventory, by: \.bytes).values.filter { $0.count > 1 }
         let total = candidates.reduce(0) { $0 + $1.count }
         var done = 0, reported = 0

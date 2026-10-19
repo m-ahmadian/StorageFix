@@ -19,3 +19,13 @@ struct PathHighlightTests {
         #expect(PathHighlight.make(for: mixed[1], among: mixed) == PathHighlight(shared: "/", distinct: "Volumes/Disk/"))
     }
 }
+
+struct PathHighlightScaleTests {
+    @Test func `The shared prefix is computed once and matches the per-path result`() {
+        let paths = ["/Users/a/Documents/Project/x.txt", "/Users/a/Downloads/x.txt", "/Users/a/Desktop/old/x.txt"]
+        let common = PathHighlight.commonFolderCount(paths)
+        #expect(common == 2)
+        for path in paths { #expect(PathHighlight.make(for: path, commonFolderCount: common) == PathHighlight.make(for: path, among: paths)) }
+        #expect(PathHighlight.commonFolderCount([]) == 0)
+    }
+}
