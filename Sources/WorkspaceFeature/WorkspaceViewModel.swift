@@ -27,6 +27,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public let reviewQueue: ReviewQueueViewModel?
     public let apps: ApplicationsViewModel
     public let photos: SimilarPhotosViewModel?
+    public let startup: LoginItemsViewModel?
     @Published public private(set) var isReviewing = false
     @Published public private(set) var reviewStep = ""
     @Published public private(set) var completedSteps = 0
@@ -53,8 +54,8 @@ public final class WorkspaceViewModel: ObservableObject {
     private let defaults: UserDefaults
     private var subscriptions: Set<AnyCancellable> = []
     public init(cleanup: CleanupViewModel, duplicates: DuplicateViewModel, files: LargeFilesViewModel,
-                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil, autoReviewFolder: URL? = nil, photos: SimilarPhotosViewModel? = nil, autoPhotosFolder: URL? = nil) {
-        self.photos = photos
+                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil, autoReviewFolder: URL? = nil, photos: SimilarPhotosViewModel? = nil, autoPhotosFolder: URL? = nil, startup: LoginItemsViewModel? = nil) {
+        self.photos = photos; self.startup = startup
         self.scanComparison = scanComparison
         self.reviewQueue = reviewQueue
         self.includesDuplicateComparison = includesDuplicateComparison
@@ -64,6 +65,7 @@ public final class WorkspaceViewModel: ObservableObject {
         var publishers = [cleanup.objectWillChange, duplicates.objectWillChange, files.objectWillChange, map.objectWillChange, apps.objectWillChange]
         if let scanComparison { publishers.append(scanComparison.objectWillChange) }
         if let photos { publishers.append(photos.objectWillChange) }
+        if let startup { publishers.append(startup.objectWillChange) }
         if let reviewQueue {
             publishers.append(reviewQueue.objectWillChange)
             reviewQueue.$snapshot.compactMap(\.lastRun).removeDuplicates { $0.id == $1.id }
