@@ -5,7 +5,9 @@ on:
     branches: [main, "claude/**"]
 jobs:
   launch:
-    runs-on: macos-26
+    # Opens the app on screen, so it runs only on GitHub's machines, never on the owner's Mac.
+    if: vars.USE_GITHUB_MAC == 'true'
+    runs-on: ${{ vars.USE_GITHUB_MAC == 'true' && 'macos-26' || 'self-hosted' }}
     timeout-minutes: 30
     defaults:
       run:
@@ -14,7 +16,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Build and launch the direct edition, then measure idle CPU
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"; fi
           SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build.log 2>&1 || { tail -30 /tmp/build.log; exit 1; }
           open dist/StorageFix.app; sleep 25
           pid=$(pgrep -x StorageFix | head -1 || true)

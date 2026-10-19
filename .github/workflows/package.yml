@@ -8,7 +8,7 @@ on:
 
 jobs:
   package:
-    runs-on: macos-26
+    runs-on: ${{ vars.USE_GITHUB_MAC == 'true' && 'macos-26' || 'self-hosted' }}
     timeout-minutes: 40
     permissions:
       contents: write
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Build direct and Store test DMGs
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"; fi
           SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh
           SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh
           python3 Scripts/verify-store.py dist/AppStore/StorageFix.app
