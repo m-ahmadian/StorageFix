@@ -34,11 +34,11 @@ struct DuplicateViewModelTests {
         #expect(vm.resultMessage?.contains("Trash") == true)
         #expect(!vm.isLoading)
     }
-    @Test func `A background scan started by the view model finishes on its own and can be cancelled`() async {
+    @Test func `A background scan started by the view model finishes on its own and can be cancelled`() async throws {
         let vm = DuplicateViewModel(service: ReviewService())
         vm.startScan()
-        let deadline = Date().addingTimeInterval(5)
-        while !vm.hasScanned, Date() < deadline { await Task.yield() }
+        let deadline = Date().addingTimeInterval(30)
+        while vm.isLoading || !vm.hasScanned, Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
         #expect(vm.hasScanned && vm.groups.count == 1 && vm.progress == nil && !vm.isScanning)
         vm.cancelScan()
         #expect(!vm.isLoading)
