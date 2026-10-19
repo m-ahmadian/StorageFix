@@ -19,7 +19,7 @@ jobs:
     name: ${{ matrix.edition }} build and tests
     permissions:
       contents: write
-    runs-on: ${{ vars.USE_GITHUB_MAC == 'true' && 'macos-26' || 'self-hosted' }}
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'macos-26' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -95,7 +95,7 @@ jobs:
     name: Opt-in performance baselines
     # Manual run, or include [benchmark] in a pushed commit message.
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[benchmark]'))
-    runs-on: ${{ vars.USE_GITHUB_MAC == 'true' && 'macos-26' || 'self-hosted' }}
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'macos-26' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5

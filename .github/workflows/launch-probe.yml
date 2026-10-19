@@ -6,8 +6,8 @@ on:
 jobs:
   launch:
     # Opens the app on screen, so it runs only on GitHub's machines, never on the owner's Mac.
-    if: vars.USE_GITHUB_MAC == 'true'
-    runs-on: ${{ vars.USE_GITHUB_MAC == 'true' && 'macos-26' || 'self-hosted' }}
+    if: vars.USE_SELF_HOSTED != 'true'
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'macos-26' }}
     timeout-minutes: 30
     defaults:
       run:
