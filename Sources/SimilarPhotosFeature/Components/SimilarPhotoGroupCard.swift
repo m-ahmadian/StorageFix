@@ -7,6 +7,9 @@ struct SimilarPhotoGroupCard: View {
     let group: SimilarPhotoGroup
     @ObservedObject var viewModel: SimilarPhotosViewModel
     let reveal: (String) -> Void
+    /// Big groups show a first row only until the person asks for the rest.
+    @State private var showsAll = false
+    private static let previewCount = 12
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.small) {
@@ -16,10 +19,13 @@ struct SimilarPhotoGroupCard: View {
                 Text("\(viewModel.size(group.extraBytes)) in extras").font(.caption).foregroundStyle(DesignSystem.Colors.secondaryText)
             }
             ScrollView(.horizontal) {
-                HStack(spacing: DesignSystem.Spacing.medium) {
-                    ForEach(group.photos) { photo in tile(photo) }
+                LazyHStack(spacing: DesignSystem.Spacing.medium) {
+                    ForEach(showsAll ? group.photos : Array(group.photos.prefix(Self.previewCount))) { photo in tile(photo) }
+                    if !showsAll && group.photos.count > Self.previewCount {
+                        Button("Show all \(group.photos.count)") { showsAll = true }.frame(width: 120, height: 120)
+                    }
                 }.padding(.bottom, DesignSystem.Spacing.xSmall)
-            }
+            }.frame(height: 190)
         }
         .padding(DesignSystem.Spacing.medium).workspaceCard()
     }
@@ -44,7 +50,6 @@ struct SimilarPhotoGroupCard: View {
             Text("\(photo.pixelWidth)×\(photo.pixelHeight) · \(viewModel.size(photo.bytes))")
                 .font(.caption2).foregroundStyle(DesignSystem.Colors.secondaryText)
         }
-        .help(photo.path)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(URL(fileURLWithPath: photo.path).lastPathComponent), \(photo.pixelWidth) by \(photo.pixelHeight)\(photo.path == group.suggestedKeep ? ", suggested to keep" : "")")
     }

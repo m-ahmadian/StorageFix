@@ -6,6 +6,9 @@ import SwiftUI
 public struct SimilarPhotosView: View {
     @ObservedObject private var viewModel: SimilarPhotosViewModel
     @Environment(\.folderAccessSession) private var folderAccess
+    /// Only this many groups are built at a time, so long results scroll smoothly.
+    @State private var limit = SimilarPhotosView.pageSize
+    private static let pageSize = 40
     public init(viewModel: SimilarPhotosViewModel) { self.viewModel = viewModel }
 
     public var body: some View {
@@ -21,6 +24,7 @@ public struct SimilarPhotosView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DesignSystem.Colors.background)
         .sheet(isPresented: $viewModel.showsConfirmation) { confirmation }
+        .onChange(of: viewModel.hasScanned) { limit = SimilarPhotosView.pageSize }
     }
 
     private var header: some View {
@@ -73,10 +77,14 @@ public struct SimilarPhotosView: View {
                         Label("This folder has many photos; the newest \(viewModel.analyzedCount) were compared. Choose a smaller folder to compare older ones.", systemImage: "info.circle")
                             .font(.caption).frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    ForEach(viewModel.groups) { group in
+                    ForEach(viewModel.groups.prefix(limit)) { group in
                         SimilarPhotoGroupCard(group: group, viewModel: viewModel) { path in
                             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                         }
+                    }
+                    if viewModel.groups.count > limit {
+                        Button("Show \(min(SimilarPhotosView.pageSize, viewModel.groups.count - limit)) more groups") { limit += SimilarPhotosView.pageSize }
+                            .padding(.vertical, 8)
                     }
                 }
             }
