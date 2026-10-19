@@ -6,28 +6,24 @@ jobs:
   probe:
     runs-on: macos-26
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [cbe087b, "4269230", "53051d6", HEAD]
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
-      - name: Build Store and direct apps
+        with:
+          fetch-depth: 0
+      - name: Build and sample direct edition
         run: |
           set +e
+          [ "${{ matrix.ref }}" != HEAD ] && git checkout -q ${{ matrix.ref }}
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build1.log 2>&1; echo "::notice title=direct build::exit $?%0A$(tail -8 /tmp/build1.log | tr '\n' '~' | sed 's/~/%0A/g')"
-          SIGN_IDENTITY=- NOTARY_PROFILE= APP_STORE_INSTALLER_IDENTITY= Scripts/package-store.sh > /tmp/build2.log 2>&1; echo "::notice title=store build::exit $?%0A$(tail -8 /tmp/build2.log | tr '\n' '~' | sed 's/~/%0A/g')"
-          ls -d dist/*.app dist/AppStore/*.app
-      - name: Launch each edition and sample the main thread
-        run: |
-          set +e
-          for app in dist/StorageFix.app dist/AppStore/StorageFix.app; do
-            open "$app"; sleep 20
-            pid=$(pgrep -x StorageFix | head -1)
-            if [ -z "$pid" ]; then echo "::error title=$app::not running"; continue; fi
-            sample "$pid" 3 -file /tmp/sample.txt >/dev/null 2>&1 || true
-            main=$(awk '/Thread_[0-9]+.*DispatchQueue_1: com.apple.main-thread/{f=1} f{print} /^ *$/{if(f)exit}' /tmp/sample.txt | head -60 | sed 's/^[ +!:|]*//' | cut -c1-140)
-            echo "::notice title=main thread $app::$(echo "$main" | tr '\n' '~' | sed 's/~/%0A/g')"
-            cpu=$(ps -o %cpu= -p "$pid"); echo "::notice title=cpu $app::$cpu"
-            kill "$pid"; sleep 3
-          done
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build.log 2>&1 || echo "::error title=${{ matrix.ref }} build::failed"
+          open dist/StorageFix.app; sleep 25
+          pid=$(pgrep -x StorageFix | head -1)
+          ps -o %cpu= -p "$pid" > /tmp/cpu1; sleep 5; ps -o %cpu= -p "$pid" > /tmp/cpu2
+          echo "::notice title=cpu ${{ matrix.ref }}::$(cat /tmp/cpu1) then $(cat /tmp/cpu2)"
