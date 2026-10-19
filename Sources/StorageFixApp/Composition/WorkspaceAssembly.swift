@@ -5,6 +5,7 @@ import Foundation
 import LargeFilesFeature
 import ReviewQueueFeature
 import ScanComparisonFeature
+import SimilarPhotosFeature
 import StorageFixCore
 import StorageMapFeature
 import WorkspaceFeature
@@ -39,6 +40,8 @@ import WorkspaceFeature
             apps: ApplicationsViewModel(service: ApplicationService(roots: applications, permitsRemoval: !store),
                 permitsRemoval: !store, requiresFolderSelection: store),
             volumeService: volumes, reviewQueue: ReviewQueueViewModel(queue: queue, presenter: presenter, reportService: QueueReportService()), scanComparison: comparison,
-            autoReviewFolder: store ? realHome.appending(path: "Downloads", directoryHint: .isDirectory) : nil)
+            autoReviewFolder: store ? realHome.appending(path: "Downloads", directoryHint: .isDirectory) : nil,
+            photos: SimilarPhotosViewModel(service: VisionSimilarPhotoService()),
+            autoPhotosFolder: realHome.appending(path: "Pictures", directoryHint: .isDirectory))
     }
 }

@@ -5,6 +5,7 @@ import DuplicateFeature
 import LargeFilesFeature
 import ReviewQueueFeature
 import ScanComparisonFeature
+import SimilarPhotosFeature
 import StorageFixDesignSystem
 import StorageMapFeature
 import SwiftUI
@@ -24,6 +25,7 @@ public struct WorkspaceView: View {
                 case .cleanup: if vm.supportsCleanup { CleanupView(viewModel: vm.cleanup) }
                 case .map: StorageMapView(viewModel: vm.map)
                 case .duplicates: DuplicateView(viewModel: vm.duplicates)
+                case .photos: if let photos = vm.photos { SimilarPhotosView(viewModel: photos) }
                 case .files: LargeFilesView(viewModel: vm.files)
                 case .apps: ApplicationsView(viewModel: vm.apps)
                 case .safety: SafetyView()
@@ -53,7 +55,9 @@ public struct WorkspaceView: View {
             if vm.reviewQueue != nil { navigation(.queue, key: "8") }
             if vm.scanComparison != nil { navigation(.comparison, key: "9") }
             heading("STORAGE").padding(.top, 20)
-            if vm.supportsCleanup { navigation(.cleanup, key: "2") }; navigation(.map, key: "3"); navigation(.duplicates, key: "4"); navigation(.files, key: "5")
+            if vm.supportsCleanup { navigation(.cleanup, key: "2") }; navigation(.map, key: "3"); navigation(.duplicates, key: "4")
+            if vm.photos != nil { navigation(.photos, key: "0") }
+            navigation(.files, key: "5")
             heading("MAC CARE").padding(.top, 20)
             navigation(.apps, key: "6"); navigation(.safety, key: "7")
                 }

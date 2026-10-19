@@ -6,6 +6,7 @@ import Foundation
 import LargeFilesFeature
 import ReviewQueueFeature
 import ScanComparisonFeature
+import SimilarPhotosFeature
 import StorageFixCore
 import StorageMapFeature
 
@@ -25,6 +26,7 @@ public final class WorkspaceViewModel: ObservableObject {
     public let scanComparison: ScanComparisonViewModel?
     public let reviewQueue: ReviewQueueViewModel?
     public let apps: ApplicationsViewModel
+    public let photos: SimilarPhotosViewModel?
     @Published public private(set) var isReviewing = false
     @Published public private(set) var reviewStep = ""
     @Published public private(set) var completedSteps = 0
@@ -51,7 +53,8 @@ public final class WorkspaceViewModel: ObservableObject {
     private let defaults: UserDefaults
     private var subscriptions: Set<AnyCancellable> = []
     public init(cleanup: CleanupViewModel, duplicates: DuplicateViewModel, files: LargeFilesViewModel,
-                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil, autoReviewFolder: URL? = nil) {
+                map: StorageMapViewModel, apps: ApplicationsViewModel, defaults: UserDefaults = .standard, edition: DistributionMode = .current, includesDuplicateComparison: Bool = false, volumeService: (any VolumeInformationServiceProtocol)? = nil, reviewQueue: ReviewQueueViewModel? = nil, scanComparison: ScanComparisonViewModel? = nil, autoReviewFolder: URL? = nil, photos: SimilarPhotosViewModel? = nil, autoPhotosFolder: URL? = nil) {
+        self.photos = photos
         self.scanComparison = scanComparison
         self.reviewQueue = reviewQueue
         self.includesDuplicateComparison = includesDuplicateComparison
@@ -60,6 +63,7 @@ public final class WorkspaceViewModel: ObservableObject {
         if let data = defaults.data(forKey: "storagefix.activity.v1"), let entries = try? JSONDecoder().decode([ActivityEntry].self, from: data) { activity = Array(entries.prefix(12)) }
         var publishers = [cleanup.objectWillChange, duplicates.objectWillChange, files.objectWillChange, map.objectWillChange, apps.objectWillChange]
         if let scanComparison { publishers.append(scanComparison.objectWillChange) }
+        if let photos { publishers.append(photos.objectWillChange) }
         if let reviewQueue {
             publishers.append(reviewQueue.objectWillChange)
             reviewQueue.$snapshot.compactMap(\.lastRun).removeDuplicates { $0.id == $1.id }
@@ -71,6 +75,7 @@ public final class WorkspaceViewModel: ObservableObject {
         cleanup.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Cleanup") }.sink { [weak self] message in self?.record(title: "Cache cleanup", detail: message) }.store(in: &subscriptions)
         duplicates.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Moved") }.sink { [weak self] message in self?.record(title: "Duplicate copies", detail: message) }.store(in: &subscriptions)
         files.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Moved") }.sink { [weak self] message in self?.record(title: "File review", detail: message) }.store(in: &subscriptions)
+        photos?.$resultMessage.compactMap { $0 }.filter { $0.hasPrefix("Moved") }.sink { [weak self] message in self?.record(title: "Similar photos", detail: message) }.store(in: &subscriptions)
         apps.$resultMessage.compactMap { $0 }.sink { [weak self] message in self?.record(title: "Application review", detail: message) }.store(in: &subscriptions)
         // Once the Home folder is allowed, review a sensible folder without asking the person to pick one.
         if let autoReviewFolder {
@@ -78,6 +83,10 @@ public final class WorkspaceViewModel: ObservableObject {
                 guard let self, self.files.needsFolder else { return }
                 self.chooseReviewFolder(autoReviewFolder)
             }.store(in: &subscriptions)
+        }
+        // Pictures becomes the photo folder as soon as Home access exists (at once in the direct edition).
+        if let photos, let autoPhotosFolder {
+            cleanup.$needsAccess.filter { !$0 }.first().sink { _ in photos.offerDefaultFolder(autoPhotosFolder) }.store(in: &subscriptions)
         }
     }
     public func setDuplicateComparison(_ included: Bool) { if !isBusy { includesDuplicateComparison = included } }

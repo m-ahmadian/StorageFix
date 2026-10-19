@@ -18,6 +18,10 @@ folder. Old installers, leftovers of deleted apps, Xcode archives and local AI
 models are moved to Trash instead. To recognise leftovers, StorageFix reads the
 bundle identifiers of apps in the standard Applications folders on this Mac;
 that list is never stored or sent anywhere.
+Similar Photos compares images in the folder you choose (Pictures by default)
+with Apple's on-device image analysis. Image fingerprints exist only in memory
+during the scan; your Photos library is not opened. Chosen photos go to Trash.
+The menu bar item reads the startup disk's free space; nothing is recorded.
 Application inventory in the Store edition is read-only. Broad system-cache
 cleanup and app uninstalling are not part of that edition.
 
