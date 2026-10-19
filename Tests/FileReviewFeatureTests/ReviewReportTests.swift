@@ -63,7 +63,7 @@ struct ReviewReportTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let task = Task { await vm.review() }
         await service.waitUntilScanning()
-        #expect(vm.isReviewing && vm.latestReport == nil && vm.completedSteps == 0)
+        #expect(vm.isReviewing && vm.latestReport == nil && vm.completedSteps == 1)  // caches finished first
         #expect(vm.canReview == false)
         vm.select(.apps)
         #expect(vm.selectedSection == .overview)
