@@ -8,14 +8,17 @@ public actor NativeCacheCleanupService: CleanupServiceProtocol {
     private let fileSystem: CacheFileSystem
     private let catalog: [CacheCategoryDefinition]
     private let runningApplications: any RunningApplicationsProviding
+    private let installedApplications: any InstalledApplicationsProviding
     private var granted: Bool
 
     /// - Parameter requiresGrant: true in the sandbox, where Home must be chosen in an open panel first.
     public init(home: URL, requiresGrant: Bool, runningApplications: any RunningApplicationsProviding = WorkspaceRunningApplications(),
-                catalog: [CacheCategoryDefinition] = CacheCategoryCatalog.standard) {
+                installedApplications: (any InstalledApplicationsProviding)? = nil,
+                catalog: [CacheCategoryDefinition] = CacheCategoryCatalog.standard, now: @escaping @Sendable () -> Date = { Date() }) {
         let home = home.standardizedFileURL
         requiredFolder = requiresGrant ? home : nil
-        fileSystem = CacheFileSystem(home: home)
+        fileSystem = CacheFileSystem(home: home, now: now)
+        self.installedApplications = installedApplications ?? WorkspaceInstalledApplications(home: home)
         self.catalog = catalog; self.runningApplications = runningApplications; granted = !requiresGrant
     }
 
@@ -32,11 +35,13 @@ public actor NativeCacheCleanupService: CleanupServiceProtocol {
     public func scan() async throws -> CleanupReport {
         try requireAccess()
         let free = fileSystem.availableBytes() ?? 0
+        let installed = await installedApplications.installedBundleIdentifiers()
         var categories: [CleanupCategory] = []
         for definition in catalog {
             try Task.checkCancellation()
-            let bytes = try fileSystem.allocatedBytes(of: fileSystem.removableEntries(for: definition.scope))
-            categories.append(category(definition, before: bytes, after: bytes, status: .scanned, message: ""))
+            let entries = fileSystem.removableEntries(for: definition.scope, installed: installed)
+            let bytes = try fileSystem.allocatedBytes(of: entries)
+            categories.append(category(definition, before: bytes, after: bytes, status: .scanned, message: "", entries: entries))
         }
         return CleanupReport(mode: "scan", freeBytesBefore: free, freeBytesAfter: free, freeBytesReclaimed: 0, categories: categories)
     }
@@ -44,36 +49,46 @@ public actor NativeCacheCleanupService: CleanupServiceProtocol {
     public func clean(categoryIDs: Set<String>) async throws -> CleanupReport {
         try requireAccess()
         let running = await runningApplications.runningBundleIdentifiers()
+        let installed = await installedApplications.installedBundleIdentifiers()
         let freeBefore = fileSystem.availableBytes() ?? 0
         var categories: [CleanupCategory] = []
         for definition in catalog {
             try Task.checkCancellation()
-            categories.append(try clean(definition, selected: categoryIDs.contains(definition.id), running: running))
+            categories.append(try clean(definition, selected: categoryIDs.contains(definition.id), running: running, installed: installed))
         }
         let freeAfter = fileSystem.availableBytes() ?? freeBefore
         return CleanupReport(mode: "clean", freeBytesBefore: freeBefore, freeBytesAfter: freeAfter,
                              freeBytesReclaimed: max(0, freeAfter - freeBefore), categories: categories)
     }
 
-    private func clean(_ definition: CacheCategoryDefinition, selected: Bool, running: Set<String>) throws -> CleanupCategory {
-        let entries = fileSystem.removableEntries(for: definition.scope)
+    private func clean(_ definition: CacheCategoryDefinition, selected: Bool, running: Set<String>,
+                       installed: InstalledApplicationIndex) throws -> CleanupCategory {
+        let entries = fileSystem.removableEntries(for: definition.scope, installed: installed)
         let before = try fileSystem.allocatedBytes(of: entries)
-        guard selected else { return category(definition, before: before, after: before, status: .scanned, message: "") }
+        guard selected else { return category(definition, before: before, after: before, status: .scanned, message: "", entries: entries) }
         if let app = running.first(where: { id in definition.blockingBundlePrefixes.contains { id.hasPrefix($0) } }) {
-            return category(definition, before: before, after: before, status: .blocked, message: "Quit \(app) and try again.")
+            return category(definition, before: before, after: before, status: .blocked, message: "Quit \(app) and try again.", entries: entries)
         }
-        let failed = try fileSystem.remove(entries, within: fileSystem.targets(for: definition.scope))
-        let after = try fileSystem.allocatedBytes(of: fileSystem.removableEntries(for: definition.scope))
+        let failed = try fileSystem.remove(entries, within: fileSystem.targets(for: definition.scope), toTrash: definition.movesToTrash)
+        let remaining = fileSystem.removableEntries(for: definition.scope, installed: installed)
+        let after = try fileSystem.allocatedBytes(of: remaining)
         let status: CleanupStatus = failed.isEmpty || after < before ? .cleaned : .failed
         let message = failed.isEmpty ? "" : "\(failed.count) \(failed.count == 1 ? "item" : "items") could not be removed (in use or protected by macOS)."
-        return category(definition, before: before, after: after, status: status, message: message)
+        return category(definition, before: before, after: after, status: status, message: message, entries: remaining)
     }
 
     private func category(_ definition: CacheCategoryDefinition, before: Int64, after: Int64,
-                          status: CleanupStatus, message: String) -> CleanupCategory {
-        CleanupCategory(id: definition.id, name: definition.name, path: definition.displayPath, safeDefault: definition.safeDefault,
-                        warning: definition.warning, bytesBefore: before, bytesAfter: after,
-                        bytesReclaimed: max(0, before - after), status: status, message: message)
+                          status: CleanupStatus, message: String, entries: [URL]) -> CleanupCategory {
+        let listsItems: Bool
+        switch definition.scope {
+        case .files, .orphans: listsItems = true
+        case .contents, .childrenExcluding: listsItems = false
+        }
+        return CleanupCategory(id: definition.id, name: definition.name, path: definition.displayPath, safeDefault: definition.safeDefault,
+                               warning: definition.warning, bytesBefore: before, bytesAfter: after,
+                               bytesReclaimed: max(0, before - after), status: status, message: message,
+                               movesToTrash: definition.movesToTrash,
+                               items: listsItems ? entries.map(\.lastPathComponent).sorted() : [])
     }
 
     private func requireAccess() throws {
