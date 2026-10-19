@@ -23,9 +23,10 @@ let package = Package(
         .target(name: "ApplicationsFeature", dependencies: ["StorageFixCore", "StorageFixDesignSystem"]),
         .target(name: "ScanComparisonFeature", dependencies: ["StorageFixCore", "StorageFixDesignSystem"]),
         .target(name: "ReviewQueueFeature", dependencies: ["StorageFixCore", "StorageFixDesignSystem"]),
-        .target(name: "WorkspaceFeature", dependencies: ["CleanupFeature", "DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "ReviewQueueFeature", "ScanComparisonFeature", "StorageFixCore", "StorageFixDesignSystem"]),
-        .executableTarget(name: "StorageFixApp", dependencies: ["WorkspaceFeature", "StorageFixDesignSystem", "StorageFixCore", "CleanupFeature", "DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "ReviewQueueFeature", "ScanComparisonFeature"]),
-        .testTarget(name: "FileReviewFeatureTests", dependencies: ["DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "WorkspaceFeature", "ReviewQueueFeature", "ScanComparisonFeature", "StorageFixCore"]),
+        .target(name: "SimilarPhotosFeature", dependencies: ["StorageFixCore", "StorageFixDesignSystem"]),
+        .target(name: "WorkspaceFeature", dependencies: ["CleanupFeature", "DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "ReviewQueueFeature", "ScanComparisonFeature", "SimilarPhotosFeature", "StorageFixCore", "StorageFixDesignSystem"]),
+        .executableTarget(name: "StorageFixApp", dependencies: ["WorkspaceFeature", "StorageFixDesignSystem", "StorageFixCore", "CleanupFeature", "DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "ReviewQueueFeature", "ScanComparisonFeature", "SimilarPhotosFeature"]),
+        .testTarget(name: "FileReviewFeatureTests", dependencies: ["DuplicateFeature", "LargeFilesFeature", "StorageMapFeature", "ApplicationsFeature", "WorkspaceFeature", "ReviewQueueFeature", "ScanComparisonFeature", "SimilarPhotosFeature", "StorageFixCore"]),
         .testTarget(
             name: "StorageFixCoreTests",
             dependencies: ["StorageFixCore"]
