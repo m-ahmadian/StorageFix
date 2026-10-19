@@ -38,6 +38,7 @@ public final class WorkspaceViewModel: ObservableObject {
     /// A queue run the person has moved on from (new folder or a new review cycle); the journey no longer waits on it.
     @Published private(set) var acknowledgedRunID: UUID?
     public let edition: DistributionMode
+    private var reviewTask: Task<Void, Never>?
     /// Cache cleanup exists in both editions; the sandboxed one first needs the Home folder granted.
     public var supportsCleanup: Bool { true }
     /// Caches join Quick Review once cleanup can measure them.
@@ -83,7 +84,8 @@ public final class WorkspaceViewModel: ObservableObject {
     }
     /// Opens Cleanup with the reviewed selection and asks for confirmation. Nothing is removed until confirmed there.
     public func reviewAndClean() {
-        guard !isBusy, cleanup.hasScanned, cleanup.selectedBytes > 0 else { return }
+        if isReviewing { stopReview(); isReviewing = false }
+        guard !cleanup.isLoading, reviewQueue?.isExecuting != true, cleanup.hasScanned, cleanup.selectedBytes > 0 else { return }
         select(.cleanup)
         cleanup.requestCleanup()
     }
@@ -99,6 +101,14 @@ public final class WorkspaceViewModel: ObservableObject {
         acknowledgedRunID = reviewQueue?.snapshot.lastRun?.id
         refreshDisk()
     }
+    /// Starts Quick Review owned by the view model, so other actions (Review & Clean) can stop it.
+    public func startReview() {
+        guard canReview else { return }
+        reviewTask = Task { await review() }
+    }
+    /// Stops the review at once; a stage blocked on the filesystem is abandoned rather than awaited.
+    public func stopReview() { reviewTask?.cancel(); reviewTask = nil }
+
     public func review() async {
         guard canReview else { return }
         isReviewing = true; completedSteps = 0; lastReviewDate = nil; latestReport = nil; reviewMessage = nil
@@ -107,15 +117,22 @@ public final class WorkspaceViewModel: ObservableObject {
         for (title, scan, result) in reviewOperations {
             guard !Task.isCancelled else { cancelReview(); return }
             reviewStep = title
-            await scan()
-            guard !Task.isCancelled else { cancelReview(); return }
+            guard await ReviewStage.run(scan), !Task.isCancelled else { cancelReview(); return }
             results.append(result())
             completedSteps += 1
         }
         finishReview(results)
     }
-    private var reviewOperations: [(String, () async -> Void, () -> ReviewAreaResult)] {
-        var operations: [(String, () async -> Void, () -> ReviewAreaResult)] = [
+    private var reviewOperations: [(String, @MainActor () async -> Void, @MainActor () -> ReviewAreaResult)] {
+        var operations: [(String, @MainActor () async -> Void, @MainActor () -> ReviewAreaResult)] = []
+        // Caches first: fast, and the cleanup report is ready while slower folder scans continue.
+        if reviewsCaches {
+            operations.append(("Measuring caches", { await self.cleanup.scan() }, {
+                self.area(.cleanup, scope: "Allow-listed cache locations", count: self.cleanup.categories.count,
+                          bytes: self.cleanup.cleanableBytes, error: self.cleanup.errorMessage)
+            }))
+        }
+        operations += [
             ("Reviewing folder files", { await self.files.scan() }, {
                 self.area(.files, scope: self.files.scope.path, count: self.files.files.count,
                           bytes: self.files.files.reduce(0) { $0 + $1.bytes }, error: self.files.errorMessage ?? (self.files.inventoryResult?.coverage.hasReadErrors == true ? "Partial inventory: some entries could not be measured. See file review coverage." : nil))
@@ -131,12 +148,6 @@ public final class WorkspaceViewModel: ObservableObject {
             operations.append(("Measuring applications", { await self.apps.scan() }, {
                 self.area(.apps, scope: self.apps.scopeDescription, count: self.apps.applications.count,
                           bytes: self.apps.totalBytes, error: self.apps.errorMessage)
-            }))
-        }
-        if reviewsCaches {
-            operations.append(("Reviewing caches", { await self.cleanup.scan() }, {
-                self.area(.cleanup, scope: "Allow-listed cache locations", count: self.cleanup.categories.count,
-                          bytes: self.cleanup.cleanableBytes, error: self.cleanup.errorMessage)
             }))
         }
         return operations
