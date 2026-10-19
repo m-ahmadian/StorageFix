@@ -9,10 +9,14 @@ public actor FileSystemDuplicateService: DuplicateServiceProtocol {
 
     public func scan() async throws -> [DuplicateGroup] { try await scan(in: nil) }
 
-    public func scan(in root: URL?) async throws -> [DuplicateGroup] {
+    public func scan(in root: URL?) async throws -> [DuplicateGroup] { try await scan(in: root) { _ in } }
+
+    // Exact signature so this, not the protocol default, is used through the existential.
+    public func scan(in root: URL?, progress: @escaping @Sendable (DuplicateScanProgress) -> Void) async throws -> [DuplicateGroup] {
         reviewedGroups = []
         let roots = root.map { [$0] } ?? roots
-        let task = Task.detached { try Self.groups(in: roots) }
+        // Runs off the actor and off the main thread; the interface stays responsive and only receives progress.
+        let task = Task.detached(priority: .utility) { try Self.groups(in: roots, progress: progress) }
         let groups = try await withTaskCancellationHandler(operation: { try await task.value }, onCancel: { task.cancel() })
         try Task.checkCancellation()
         reviewedGroups = groups
@@ -38,15 +42,30 @@ public actor FileSystemDuplicateService: DuplicateServiceProtocol {
         for path in paths.sorted() {
             try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: nil)
         }
-        reviewedGroups = []
+        // Remaining sets stay reviewed, so more copies can be removed without a rescan.
+        reviewedGroups = reviewedGroups.compactMap { group in
+            let left = ([group.original] + group.duplicates).filter { !paths.contains($0.path) }
+            return left.count > 1 ? DuplicateGroup(id: group.id, original: left[0], duplicates: Array(left.dropFirst())) : nil
+        }
     }
 
-    private static func groups(in roots: [URL]) throws -> [DuplicateGroup] {
+    private static func groups(in roots: [URL], progress: @Sendable (DuplicateScanProgress) -> Void) throws -> [DuplicateGroup] {
+        progress(DuplicateScanProgress(phase: .listing, completed: 0, total: 0))
         let inventory = try FileInventory.files(in: roots)
-        let bySize = Dictionary(grouping: inventory, by: \.bytes)
+        let candidates = Dictionary(grouping: inventory, by: \.bytes).values.filter { $0.count > 1 }
+        let total = candidates.reduce(0) { $0 + $1.count }
+        var done = 0, reported = 0
+        let step = max(1, total / 200)   // at most ~200 updates, so the interface is never flooded
+        progress(DuplicateScanProgress(phase: .comparing, completed: 0, total: total))
         var result: [DuplicateGroup] = []
-        for sameSize in bySize.values where sameSize.count > 1 {
-            for files in try sampleCollisions(sameSize) {
+        for sameSize in candidates {
+            let sampled = try sampleCollisions(sameSize)
+            done += sameSize.count
+            if done - reported >= step || done == total {
+                reported = done
+                progress(DuplicateScanProgress(phase: .comparing, completed: done, total: total))
+            }
+            for files in sampled {
                 var byHash: [String: [DuplicateFile]] = [:]
                 for file in files {
                     try Task.checkCancellation()

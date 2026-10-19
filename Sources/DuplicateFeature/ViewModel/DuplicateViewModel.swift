@@ -15,6 +15,9 @@ public final class DuplicateViewModel: ObservableObject {
     @Published public var showsConfirmation = false
     @Published public private(set) var needsFolder: Bool
     @Published public private(set) var queueAddResult: ReviewQueueAddResult?
+    @Published public private(set) var progress: DuplicateScanProgress?
+    /// Owned here, not by the view, so a scan keeps running while the person looks at other screens.
+    private var scanTask: Task<Void, Never>?
     let queue: (any ReviewQueueProtocol)?
     private var scope: URL?
     private var queueSubscription: AnyCancellable?
@@ -62,14 +65,26 @@ public final class DuplicateViewModel: ObservableObject {
         errorMessage = nil; resultMessage = nil
     }
 
+    public var isScanning: Bool { isLoading && !isRemoving }
+
+    /// Starts a scan in the background; switching screens does not stop it.
+    public func startScan() {
+        guard !isLoading, !isQueueBusy, !needsFolder else { return }
+        scanTask = Task { [weak self] in await self?.scan() }
+    }
+    public func cancelScan() { scanTask?.cancel(); scanTask = nil }
+
     public func scan() async {
         guard !isLoading, !isQueueBusy else { return }
         guard !needsFolder else { errorMessage = "Choose a folder to grant access before scanning."; return }
         isLoading = true; errorMessage = nil; resultMessage = nil
         selectedPaths = []; groups = []; hasScanned = false
-        defer { isLoading = false }
+        progress = DuplicateScanProgress(phase: .listing, completed: 0, total: 0)
+        defer { isLoading = false; progress = nil }
         do {
-            groups = try await service.scan(in: scope)
+            groups = try await service.scan(in: scope) { [weak self] value in
+                Task { @MainActor in if self?.isLoading == true, self?.isRemoving == false { self?.progress = value } }
+            }
             try Task.checkCancellation()
             hasScanned = true
             registerQueueInventory()
@@ -99,11 +114,18 @@ public final class DuplicateViewModel: ObservableObject {
         selectedPaths.remove(old.path)
         registerQueueInventory()
     }
+    /// Opens the confirmation for moving the selected copies straight to the Trash.
+    public func requestTrash() {
+        guard !isLoading, !isQueueBusy, !selectedPaths.isEmpty else { return }
+        showsConfirmation = true
+    }
+
+    /// Moves the selected copies to the Trash after the service rechecks every affected set.
     public func remove() async {
-        if usesReviewQueue { showsConfirmation = false; addSelectedToQueue(); return }
-        guard !isLoading, !selectedPaths.isEmpty else { return }
+        guard !isLoading, !isQueueBusy, !selectedPaths.isEmpty else { return }
         showsConfirmation = false
         let paths = selectedPaths
+        let freed = selectedBytes
         isLoading = true; isRemoving = true; errorMessage = nil; resultMessage = nil
         defer { isLoading = false; isRemoving = false }
         do {
@@ -113,9 +135,9 @@ public final class DuplicateViewModel: ObservableObject {
                 return copies.isEmpty ? nil : DuplicateGroup(id: group.id, original: group.original, duplicates: copies)
             }
             selectedPaths = []
-            resultMessage = "Moved \(paths.count) copies to Trash. Restore them in Finder if needed. Space is freed when you empty Trash. Scan again before another removal."
-            // Service requires a fresh scan after removal.
-            groups = []; hasScanned = false
+            let bytes = ByteCountFormatter.string(fromByteCount: freed, countStyle: .file)
+            resultMessage = "Moved \(paths.count) \(paths.count == 1 ? "copy" : "copies") (\(bytes)) to Trash. Restore them in Finder if needed; space is freed when you empty Trash."
+            registerQueueInventory()
         } catch {
             groups = []; selectedPaths = []; hasScanned = false
             errorMessage = "\(error.localizedDescription) Some copies may already be in Trash. Scan again to refresh the results."
