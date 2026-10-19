@@ -5,7 +5,7 @@ import Foundation
 /// finish later on its own; its late result is ignored by the review.
 enum ReviewStage {
     /// Returns true when the stage finished, false when the review was cancelled first.
-    @MainActor static func run(_ work: @escaping @MainActor () async -> Void) async -> Bool {
+    @MainActor static func run(_ work: @escaping @MainActor @Sendable () async -> Void) async -> Bool {
         let gate = StageGate()
         let stage = Task { @MainActor in await work(); gate.finish(true) }
         return await withTaskCancellationHandler {

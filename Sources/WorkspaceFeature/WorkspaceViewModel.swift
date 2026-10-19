@@ -123,8 +123,8 @@ public final class WorkspaceViewModel: ObservableObject {
         }
         finishReview(results)
     }
-    private var reviewOperations: [(String, @MainActor () async -> Void, @MainActor () -> ReviewAreaResult)] {
-        var operations: [(String, @MainActor () async -> Void, @MainActor () -> ReviewAreaResult)] = []
+    private var reviewOperations: [(String, @MainActor @Sendable () async -> Void, @MainActor () -> ReviewAreaResult)] {
+        var operations: [(String, @MainActor @Sendable () async -> Void, @MainActor () -> ReviewAreaResult)] = []
         // Caches first: fast, and the cleanup report is ready while slower folder scans continue.
         if reviewsCaches {
             operations.append(("Measuring caches", { await self.cleanup.scan() }, {
@@ -132,12 +132,10 @@ public final class WorkspaceViewModel: ObservableObject {
                           bytes: self.cleanup.cleanableBytes, error: self.cleanup.errorMessage)
             }))
         }
-        operations += [
-            ("Reviewing folder files", { await self.files.scan() }, {
+        operations.append(("Reviewing folder files", { await self.files.scan() }, {
                 self.area(.files, scope: self.files.scope.path, count: self.files.files.count,
                           bytes: self.files.files.reduce(0) { $0 + $1.bytes }, error: self.files.errorMessage ?? (self.files.inventoryResult?.coverage.hasReadErrors == true ? "Partial inventory: some entries could not be measured. See file review coverage." : nil))
-            })
-        ]
+            }))
         if includesDuplicateComparison {
             operations.append(("Comparing duplicate contents", { await self.duplicates.scan() }, {
                 self.area(.duplicates, scope: self.duplicates.scopeDescription, count: self.duplicates.duplicateCount,
