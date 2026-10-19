@@ -9,13 +9,14 @@ struct StorageFixApp: App {
     private let folderAccess: FolderAccessSession
     @State private var showsPrivacy = false
     @StateObject private var workspace: WorkspaceViewModel
-    @StateObject private var freeSpace = FreeSpaceMonitor(read: FreeSpaceMonitor.volume(at: UserHome.real))
-    @AppStorage("storagefix.menuBar.visible") private var showsMenuBar = true
+    private let freeSpace: FreeSpaceMonitor
+    @AppStorage(FreeSpaceMenuBarScene.visibilityKey) private var showsMenuBar = true
     init() {
         let script = Bundle.main.url(forResource: "storage-fix", withExtension: "sh")
             ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appending(path: "Scripts/storage-fix.sh")
         let access = FolderAccessSession()
         folderAccess = access
+        freeSpace = FreeSpaceMonitor(read: FreeSpaceMonitor.volume(at: UserHome.real))
         let remembered = access.restoreRemembered()
         _workspace = StateObject(wrappedValue: WorkspaceAssembly.make(scriptURL: script, rememberedFolders: remembered))
     }
@@ -52,13 +53,6 @@ struct StorageFixApp: App {
                     }
                 }
             }
-        MenuBarExtra(isInserted: $showsMenuBar) {
-            FreeSpaceMenuView(monitor: freeSpace, workspace: workspace) { showsMenuBar = false }
-                .environment(\.folderAccessSession, folderAccess)
-        } label: {
-            Image(systemName: freeSpace.isLow ? "externaldrive.badge.exclamationmark" : "internaldrive")
-            Text(freeSpace.title)
-        }
-        .menuBarExtraStyle(.window)
+        FreeSpaceMenuBarScene(monitor: freeSpace, workspace: workspace, folderAccess: folderAccess)
     }
 }
