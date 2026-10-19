@@ -2,25 +2,29 @@ import AppKit
 
 /// Answers whether an application with a bundle identifier is installed, so leftovers of deleted apps can be found.
 public protocol InstalledApplicationsProviding: Sendable {
-    func installedBundleIdentifiers() async -> InstalledApplicationIndex
+    /// Nil when the installed applications could not be read reliably; leftovers are then never offered.
+    func installedBundleIdentifiers() async -> InstalledApplicationIndex?
 }
 
 /// Installed (or running) bundle identifiers. Matching is deliberately generous: anything sharing a vendor prefix with an
 /// installed app (for example a helper of the same company) counts as installed and is never offered as a leftover.
-public struct InstalledApplicationIndex: Sendable, Equatable {
+public struct InstalledApplicationIndex: Sendable {
     public let identifiers: Set<String>
     private let vendors: Set<String>
+    /// A second opinion from macOS (Launch Services), which also knows apps outside the standard folders.
+    private let lookup: (@Sendable (String) -> Bool)?
 
-    public init(_ identifiers: Set<String>) {
+    public init(_ identifiers: Set<String>, lookup: (@Sendable (String) -> Bool)? = nil) {
         self.identifiers = Set(identifiers.map { $0.lowercased() })
         vendors = Set(self.identifiers.compactMap(Self.vendor))
+        self.lookup = lookup
     }
 
     public func contains(_ bundleID: String) -> Bool {
         let id = bundleID.lowercased()
         if identifiers.contains(id) { return true }
         guard let vendor = Self.vendor(of: id) else { return true }
-        return vendors.contains(vendor)
+        return vendors.contains(vendor) || lookup?(bundleID) == true
     }
 
     /// "com.example.app" → "com.example". Identifiers with fewer than three parts are treated as unknown.
@@ -50,11 +54,15 @@ public struct WorkspaceInstalledApplications: InstalledApplicationsProviding {
             .map { URL(fileURLWithPath: $0) } + [home.appending(path: "Applications")]
     }
 
-    public func installedBundleIdentifiers() async -> InstalledApplicationIndex {
-        let roots = roots
-        var ids = await WorkspaceRunningApplications().runningBundleIdentifiers()
-        for root in roots { ids.formUnion(Self.bundleIDs(in: root, depth: 2)) }
-        return InstalledApplicationIndex(ids)
+    /// macOS itself ships dozens of apps in /System/Applications; finding fewer means the folders were not readable.
+    static let minimumReliableCount = 15
+
+    public func installedBundleIdentifiers() async -> InstalledApplicationIndex? {
+        var found: Set<String> = []
+        for root in roots { found.formUnion(Self.bundleIDs(in: root, depth: 2)) }
+        guard found.count >= Self.minimumReliableCount else { return nil }
+        let running = await WorkspaceRunningApplications().runningBundleIdentifiers()
+        return InstalledApplicationIndex(found.union(running)) { id in NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) != nil }
     }
 
     static func bundleIDs(in folder: URL, depth: Int) -> Set<String> {

@@ -62,7 +62,7 @@ public actor NativeCacheCleanupService: CleanupServiceProtocol {
     }
 
     private func clean(_ definition: CacheCategoryDefinition, selected: Bool, running: Set<String>,
-                       installed: InstalledApplicationIndex) throws -> CleanupCategory {
+                       installed: InstalledApplicationIndex?) throws -> CleanupCategory {
         let entries = fileSystem.removableEntries(for: definition.scope, installed: installed)
         let before = try fileSystem.allocatedBytes(of: entries)
         guard selected else { return category(definition, before: before, after: before, status: .scanned, message: "", entries: entries) }

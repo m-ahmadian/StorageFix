@@ -7,7 +7,8 @@ struct SmartJunkCategoryTests {
     struct Running: RunningApplicationsProviding { func runningBundleIdentifiers() async -> Set<String> { [] } }
     struct Installed: InstalledApplicationsProviding {
         let ids: Set<String>
-        func installedBundleIdentifiers() async -> InstalledApplicationIndex { InstalledApplicationIndex(ids) }
+        var reliable = true
+        func installedBundleIdentifiers() async -> InstalledApplicationIndex? { reliable ? InstalledApplicationIndex(ids) : nil }
     }
 
     private func makeHome() throws -> URL {
@@ -66,6 +67,21 @@ struct SmartJunkCategoryTests {
                      "Library/Preferences/com.kept.Writer.plist", "Library/Preferences/.GlobalPreferences.plist"] {
             #expect(fm.fileExists(atPath: home.appending(path: kept).path), "\(kept) must stay")
         }
+    }
+
+    @Test func `When installed apps cannot be read, no leftovers are offered at all`() async throws {
+        let home = try makeHome()
+        defer { try? FileManager.default.removeItem(at: home) }
+        let blind = NativeCacheCleanupService(home: home, requiresGrant: false, runningApplications: Running(),
+            installedApplications: Installed(ids: [], reliable: false), now: { Date().addingTimeInterval(30 * 86_400) })
+        _ = try await blind.clean(categoryIDs: ["app-leftovers"])
+        #expect(try await blind.scan().categories.first { $0.id == "app-leftovers" }?.bytesAfter == 0)
+        #expect(FileManager.default.fileExists(atPath: home.appending(path: "Library/Preferences/com.gone.Editor.plist").path))
+    }
+
+    @Test func `Launch Services can vouch for an app outside the standard folders`() {
+        let index = InstalledApplicationIndex([], lookup: { $0 == "com.portable.App" })
+        #expect(index.contains("com.portable.App") && !index.contains("com.gone.Editor"))
     }
 
     @Test func `Recently changed leftovers are never offered`() async throws {
