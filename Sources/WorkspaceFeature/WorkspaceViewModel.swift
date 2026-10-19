@@ -95,7 +95,8 @@ public final class WorkspaceViewModel: ObservableObject {
     public var canReview: Bool { !isBusy && !files.needsFolder }
     public var isBusy: Bool { reviewQueue?.isExecuting == true || isReviewing || cleanup.isLoading || duplicates.isLoading || files.isLoading || apps.isLoading || map.isLoading }
     public func select(_ section: WorkspaceSection) {
-        guard !isReviewing, reviewQueue?.isExecuting != true, section != .cleanup || supportsCleanup else { return }
+        // Reviews and scans run in their view models, so moving between screens never interrupts them.
+        guard reviewQueue?.isExecuting != true, section != .cleanup || supportsCleanup else { return }
         if journey.current == nil { acknowledgedRunID = reviewQueue?.snapshot.lastRun?.id; hasExplored = false }
         if [.map, .files, .duplicates].contains(section), files.hasScanned || latestReport != nil { hasExplored = true }
         selectedSection = section

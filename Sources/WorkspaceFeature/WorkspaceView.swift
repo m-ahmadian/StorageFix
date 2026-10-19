@@ -85,6 +85,6 @@ public struct WorkspaceView: View {
                 .padding(.horizontal, 14).padding(.vertical, 12)
                 .background(vm.selectedSection == item ? Color.white.opacity(0.10) : .clear).clipShape(RoundedRectangle(cornerRadius: 10))
         }.buttonStyle(.plain).padding(.horizontal, 12)
-            .disabled(vm.isReviewing || vm.reviewQueue?.isExecuting == true).accessibilityValue(vm.selectedSection == item ? "Current section" : "")
+            .disabled(vm.reviewQueue?.isExecuting == true).accessibilityValue(vm.selectedSection == item ? "Current section" : "")
     }
 }
