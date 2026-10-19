@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ref: [cbe087b, "4269230", "53051d6", HEAD]
+        ref: [HEAD]
     defaults:
       run:
         shell: bash

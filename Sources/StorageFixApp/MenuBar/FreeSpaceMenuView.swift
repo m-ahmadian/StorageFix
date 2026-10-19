@@ -7,8 +7,8 @@ import WorkspaceFeature
 struct FreeSpaceMenuView: View {
     @ObservedObject var monitor: FreeSpaceMonitor
     @ObservedObject var workspace: WorkspaceViewModel
+    let openMain: () -> Void
     let hide: () -> Void
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
@@ -46,15 +46,7 @@ struct FreeSpaceMenuView: View {
         }
         .padding(DesignSystem.Spacing.medium)
         .frame(width: 280)
-        .onAppear { monitor.refresh() }
     }
 
-    private func showMainWindow() {
-        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            openWindow(id: "main")
-        }
-        NSApp.activate(ignoringOtherApps: true)
-    }
+    private func showMainWindow() { openMain() }
 }

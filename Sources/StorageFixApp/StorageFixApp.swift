@@ -10,7 +10,7 @@ struct StorageFixApp: App {
     @State private var showsPrivacy = false
     @StateObject private var workspace: WorkspaceViewModel
     private let freeSpace: FreeSpaceMonitor
-    @AppStorage(FreeSpaceMenuBarScene.visibilityKey) private var showsMenuBar = true
+    @AppStorage(StatusItemController.visibilityKey) private var showsMenuBar = true
     init() {
         let script = Bundle.main.url(forResource: "storage-fix", withExtension: "sh")
             ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appending(path: "Scripts/storage-fix.sh")
@@ -29,7 +29,9 @@ struct StorageFixApp: App {
     }
     var body: some Scene {
         WindowGroup(id: "main") {
-            WorkspaceView(viewModel: workspace).environment(\.folderAccessSession, folderAccess).sheet(isPresented: $showsPrivacy) {
+            WorkspaceView(viewModel: workspace).environment(\.folderAccessSession, folderAccess)
+                .background(StatusItemInstaller(monitor: freeSpace, workspace: workspace, folderAccess: folderAccess))
+                .sheet(isPresented: $showsPrivacy) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("Privacy & your files").font(.title2.bold())
                     ScrollView { Text(privacyText).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
@@ -53,6 +55,5 @@ struct StorageFixApp: App {
                     }
                 }
             }
-        FreeSpaceMenuBarScene(monitor: freeSpace, workspace: workspace, folderAccess: folderAccess)
     }
 }
