@@ -6,13 +6,16 @@ import WorkspaceFeature
 
 @main
 struct StorageFixApp: App {
-    private let folderAccess: any FolderAccessSessionProtocol = FolderAccessSession()
+    private let folderAccess: FolderAccessSession
     @State private var showsPrivacy = false
     @StateObject private var workspace: WorkspaceViewModel
     init() {
         let script = Bundle.main.url(forResource: "storage-fix", withExtension: "sh")
             ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appending(path: "Scripts/storage-fix.sh")
-        _workspace = StateObject(wrappedValue: WorkspaceAssembly.make(scriptURL: script))
+        let access = FolderAccessSession()
+        folderAccess = access
+        let remembered = access.restoreRemembered()
+        _workspace = StateObject(wrappedValue: WorkspaceAssembly.make(scriptURL: script, rememberedFolders: remembered))
     }
     private var privacyText: String {
         guard let url = Bundle.main.url(forResource: "Privacy-Policy", withExtension: "txt"),
@@ -33,6 +36,12 @@ struct StorageFixApp: App {
         }
             .defaultSize(width: 1240, height: 860).windowResizability(.contentMinSize).windowStyle(.hiddenTitleBar)
             .commands {
+                CommandGroup(after: .appSettings) {
+                    if DistributionMode.current == .appStore {
+                        // Removes the remembered Home grant; cache cleanup asks again on next launch.
+                        Button("Forget Cache Access") { folderAccess.forgetRemembered() }
+                    }
+                }
                 CommandGroup(replacing: .help) {
                     Button("Privacy Policy") { showsPrivacy = true }
                     Button("StorageFix Help") {

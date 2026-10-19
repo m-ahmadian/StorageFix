@@ -7,8 +7,10 @@ paths, hashes, application information and disk-space data are not uploaded.
 There are no accounts, advertising, tracking, analytics or third-party SDKs.
 StorageFix does not collect data from you over a network.
 
-The sandboxed Store edition reads folders you explicitly select. Folder access
-lasts for the app session; choosing a folder again is required after relaunch.
+The sandboxed Store edition reads folders you explicitly select. Review-folder
+access lasts for the app session. If you allow cache cleanup, StorageFix stores a
+local security-scoped bookmark for your Home folder so it does not ask again; it
+is kept only on this Mac and is removed when you choose Forget Cache Access.
 File scans never remove anything. Reviewed file removals move files to Finder
 Trash, where you can restore them until you empty Trash yourself.
 Application inventory in the Store edition is read-only. Broad system-cache

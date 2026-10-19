@@ -11,9 +11,11 @@ import WorkspaceFeature
 
 /// Own infrastructure at the app boundary. Feature view models receive protocols.
 @MainActor enum WorkspaceAssembly {
-    static func make(scriptURL: URL) -> WorkspaceViewModel {
+    static func make(scriptURL: URL, rememberedFolders: [URL] = []) -> WorkspaceViewModel {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let realHome = UserHome.real
+        // A Home grant remembered from an earlier launch means cleanup can scan right away.
+        let homeRemembered = rememberedFolders.contains { $0.standardizedFileURL.path == realHome.standardizedFileURL.path }
         let downloads = home.appending(path: "Downloads").resolvingSymlinksInPath()
         let store = DistributionMode.current == .appStore
         let source = LocalInventoryMetadataSource()
@@ -28,7 +30,7 @@ import WorkspaceFeature
         let applications = store ? [] : [URL(fileURLWithPath: "/Applications"), home.appending(path: "Applications")]
         return WorkspaceViewModel(
             cleanup: CleanupViewModel(service: store
-                ? NativeCacheCleanupService(home: realHome, requiresGrant: true) as any CleanupServiceProtocol
+                ? NativeCacheCleanupService(home: realHome, requiresGrant: !homeRemembered) as any CleanupServiceProtocol
                 : ScriptCleanupService(scriptURL: scriptURL)),
             duplicates: DuplicateViewModel(service: FileSystemDuplicateService(roots: [downloads]),
                 scopeDescription: store ? "Choose a folder" : downloads.path, requiresFolderSelection: store, queue: queue, presenter: presenter),
