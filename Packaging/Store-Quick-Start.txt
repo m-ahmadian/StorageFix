@@ -2,8 +2,10 @@ StorageFix 3.1 — Sandboxed Store Edition (local test build)
 Requires macOS 14 or later. Apple Silicon and Intel included.
 
 1. Drag StorageFix into Applications and launch it.
-2. Choose a folder in Quick Review. Review stays disabled until you choose.
-   A review scans files and duplicates, and shares results with Storage Map.
+2. Click Scan My Mac, then Allow (the panel opens on your Home folder). macOS
+   asks only once. Caches are measured first, then your Downloads folder.
+   Cleanup lists every category; caches are deleted, installers and leftovers
+   of deleted apps go to Trash. Choose Folder… reviews any other folder.
 3. Duplicates: compare full paths, choose a copy to keep, select extra copies,
    then confirm Trash. At least one copy stays; changed files require a rescan.
 4. Large & old files: size/type/modified-date/path filters, explicit selections,
@@ -11,7 +13,7 @@ Requires macOS 14 or later. Apple Silicon and Intel included.
 5. Storage map: Explore, Back, Root, Show in Finder. Read-only exploration.
 6. Applications: Choose Folder, select Applications and Scan. Inventory is
    read-only in this edition; Show opens Finder. App Store Updates opens Apple’s
-   App Store. This edition does not uninstall apps or clean system caches.
+   App Store. This edition does not uninstall apps or touch Apple system caches.
 7. Safety checklist records your own review. Open Settings, search for the
    setting indicated, then mark Reviewed. No security settings are modified.
 8. After a completed Quick Review, View Report shows each area's scope, counts,
@@ -19,7 +21,8 @@ Requires macOS 14 or later. Apple Silicon and Intel included.
    Figures overlap and are not a total of reclaimable space.
 9. Privacy Policy is available from Help. Clear History removes local activity.
 
-Access is limited to folders you choose. Choose again after relaunch.
+Access is limited to folders you allow. Only the Home permission is remembered;
+Forget Cache Access in the app menu removes it.
 No administrator privileges, Full Disk Access, network access or background
 agent is requested. A denied/inaccessible folder reports an error.
 

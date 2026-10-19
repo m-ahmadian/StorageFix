@@ -24,7 +24,7 @@ View Report shows a snapshot from the completed review. Exported reports include
 
 ## Applications and Safety Check
 
-Application inventory is read-only in the App Store edition. Safety Check records your own checklist choices and opens macOS settings. It does not detect malware or verify security configuration. System-cache cleanup and application uninstalling are not included.
+Application inventory is read-only in the App Store edition. Safety Check records your own checklist choices and opens macOS settings. It does not detect malware or verify security configuration. Application uninstalling is not included; leftovers of apps you already deleted can be moved to Trash from Cleanup. System caches in /Library and Apple caches are never touched.
 
 ## Local preferences
 
