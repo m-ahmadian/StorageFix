@@ -43,22 +43,22 @@ public struct ApplicationsView: View {
                             Spacer()
                             Text(ByteCountFormatter.string(fromByteCount: application.bytes, countStyle: .file)).monospacedDigit()
                             Button("Show") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: application.path)]) }.help("Show in Finder")
-                            if vm.permitsRemoval { Button("Remove…", systemImage: "trash") { vm.selectedApplication = application }.disabled(vm.isLoading) }
+                            if vm.canReview {
+                                Button(vm.permitsRemoval ? "Uninstall…" : "App Data…", systemImage: vm.permitsRemoval ? "trash" : "externaldrive.badge.minus") {
+                                    Task { await vm.review(application) }
+                                }.disabled(vm.isLoading)
+                            }
                         }.padding(16)
                         Divider().padding(.leading, 16)
                     }
                 }.workspaceCard()
             }
-            ReviewNotice(vm.permitsRemoval ? "Removes the app bundle only. Your documents, preferences and support files remain. Quit apps before removing them." : "App inventory is read-only. Show an app in Finder to manage it yourself; StorageFix does not uninstall apps in this edition.")
+            ReviewNotice(vm.permitsRemoval
+                ? "Uninstall finds the app's settings, caches and support files too, so nothing is left behind. Everything goes to the Trash. Your documents are never touched."
+                : vm.findsRelatedFiles ? "This edition doesn't uninstall apps. App Data… finds an app's settings and caches so you can reset it; remove the app itself from Finder."
+                : "App inventory is read-only. Allow Home access in Cleanup to also find each app's settings and caches.")
         }.padding(28).background(DesignSystem.Colors.background)
-        .sheet(item: $vm.selectedApplication) { application in
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Move \(application.name) to Trash?").font(.title2.bold())
-                Text(application.path).font(.callout).textSelection(.enabled)
-                Text("\(ByteCountFormatter.string(fromByteCount: application.bytes, countStyle: .file)) on disk. The app must be closed. App documents and support data are kept. Restore the app from Trash if you change your mind.").foregroundStyle(.secondary)
-                HStack { Button("Cancel") { vm.selectedApplication = nil }.keyboardShortcut(.cancelAction); Spacer(); Button("Move App to Trash", role: .destructive) { Task { await vm.moveToTrash() } } }
-            }.padding(28).frame(width: 520)
-        }
+        .sheet(item: $vm.selectedApplication) { application in AppRemovalSheet(application: application, vm: vm) }
         .onDisappear { scanTask?.cancel() }
     }
 }

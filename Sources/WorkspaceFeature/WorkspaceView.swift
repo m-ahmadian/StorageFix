@@ -28,6 +28,7 @@ public struct WorkspaceView: View {
                 case .photos: if let photos = vm.photos { SimilarPhotosView(viewModel: photos) }
                 case .files: LargeFilesView(viewModel: vm.files)
                 case .apps: ApplicationsView(viewModel: vm.apps)
+                case .startup: if let startup = vm.startup { LoginItemsView(viewModel: startup) }
                 case .safety: SafetyView()
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -59,7 +60,9 @@ public struct WorkspaceView: View {
             if vm.photos != nil { navigation(.photos, key: nil) }
             navigation(.files, key: "5")
             heading("MAC CARE").padding(.top, 20)
-            navigation(.apps, key: "6"); navigation(.safety, key: "7")
+            navigation(.apps, key: "6")
+            if vm.startup != nil { navigation(.startup, key: nil) }
+            navigation(.safety, key: "7")
                 }
             }
             VStack(alignment: .leading, spacing: 8) {

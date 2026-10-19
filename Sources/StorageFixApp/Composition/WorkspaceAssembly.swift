@@ -29,19 +29,22 @@ import WorkspaceFeature
         let volumes = VolumeInformationService(source: source)
         let queue = ReviewQueue(policy: policy, operations: ReviewFileOperations(policy: policy), volumes: volumes)
         let applications = store ? [] : [URL(fileURLWithPath: "/Applications"), home.appending(path: "Applications")]
+        let cleanupService = NativeCacheCleanupService(home: realHome, requiresGrant: store && !homeRemembered,
+            catalog: store ? CacheCategoryCatalog.standard : CacheCategoryCatalog.direct)
+        let related = AppRelatedFilesFinder(home: realHome, includesContainers: !store) { await cleanupService.hasAccess }
         return WorkspaceViewModel(
             // One Swift engine for both editions; only the direct one may also erase simulators.
-            cleanup: CleanupViewModel(service: NativeCacheCleanupService(home: realHome, requiresGrant: store && !homeRemembered,
-                catalog: store ? CacheCategoryCatalog.standard : CacheCategoryCatalog.direct)),
+            cleanup: CleanupViewModel(service: cleanupService),
             duplicates: DuplicateViewModel(service: FileSystemDuplicateService(roots: [downloads]),
                 scopeDescription: store ? "Choose a folder" : downloads.path, requiresFolderSelection: store, queue: queue, presenter: presenter),
             files: LargeFilesViewModel(scope: downloads, service: FileBrowserService(inventoryService: inventory), requiresFolderSelection: store, queue: queue),
             map: StorageMapViewModel(root: downloads, service: inventory, requiresFolderSelection: store, presenter: presenter, queue: queue, comparisonSession: comparisonSession),
             apps: ApplicationsViewModel(service: ApplicationService(roots: applications, permitsRemoval: !store),
-                permitsRemoval: !store, requiresFolderSelection: store),
+                permitsRemoval: !store, requiresFolderSelection: store, related: related),
             volumeService: volumes, reviewQueue: ReviewQueueViewModel(queue: queue, presenter: presenter, reportService: QueueReportService()), scanComparison: comparison,
             autoReviewFolder: store ? realHome.appending(path: "Downloads", directoryHint: .isDirectory) : nil,
             photos: SimilarPhotosViewModel(service: VisionSimilarPhotoService()),
-            autoPhotosFolder: realHome.appending(path: "Pictures", directoryHint: .isDirectory))
+            autoPhotosFolder: realHome.appending(path: "Pictures", directoryHint: .isDirectory),
+            startup: LoginItemsViewModel(service: LaunchItemsService(home: realHome, permitsRemoval: !store)))
     }
 }

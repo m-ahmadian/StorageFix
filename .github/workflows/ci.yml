@@ -19,7 +19,7 @@ jobs:
     name: ${{ matrix.edition }} build and tests
     permissions:
       contents: write
-    runs-on: macos-26
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'macos-26' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Toolchain
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"; fi
           echo "::notice title=Toolchain::$(swift --version 2>&1 | head -1) on macOS $(sw_vers -productVersion)"
       - name: Build
         run: swift build ${{ matrix.flags }} --scratch-path .build-ci 2>&1 | tee build.log
@@ -95,7 +95,7 @@ jobs:
     name: Opt-in performance baselines
     # Manual run, or include [benchmark] in a pushed commit message.
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[benchmark]'))
-    runs-on: macos-26
+    runs-on: ${{ vars.USE_SELF_HOSTED == 'true' && 'self-hosted' || 'macos-26' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -105,7 +105,7 @@ jobs:
           STORAGEFIX_BENCHMARK_OUTPUT: ${{ runner.temp }}/baseline.json
           STORAGEFIX_SHAPES_OUTPUT: ${{ runner.temp }}/shapes.json
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"; fi
           swift test -c release --scratch-path .build-bench --filter 'LocalPerformanceBaselineTests|ShapeBenchmarkTests'
       - name: Publish results as annotations
         if: always()
