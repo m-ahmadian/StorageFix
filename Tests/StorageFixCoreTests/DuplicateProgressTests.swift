@@ -27,7 +27,7 @@ struct DuplicateProgressTests {
         let values = recorder.all
         #expect(values.first?.phase == .listing)
         #expect(values.last == DuplicateScanProgress(phase: .comparing, completed: 5, total: 5) && values.last?.fraction == 1)
-        #expect(groups.count == 1)
+        #expect(groups.count == 2)   // a1–a3 and b1–b2 match; c is unique
     }
 
     @Test func `After moving one copy to Trash, the remaining copies can be removed without a rescan`() async throws {
