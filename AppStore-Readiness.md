@@ -1,4 +1,4 @@
-# StorageFix App Store readiness — October 17, 2026
+# StorageFix App Store readiness — October 19, 2026
 
 Status: publication is deferred while the product roadmap is implemented. Earlier release-preparation assets are drafts and must be refreshed after feature work; the app is not yet signed or validated for submission. No upload or public publication has been performed.
 
@@ -12,7 +12,7 @@ Roadmap stages 2 and 3 now add shared metadata sessions/coverage, session-owned 
 
 The dashboard, user journey, navigation, dated reports/text export, stable inventory counts, readable notices and expandable activity history improvements are implemented. Automated regressions and native light/dark renders cover the changed paths; this is not a claim that every workflow or environment is verified.
 
-The Store build uses App Sandbox and user-selected file read/write. Users choose folders before scans; access is session-only. Files and duplicate copies can be reviewed for Trash. Application inventory is read-only. Broad cache cleanup, its shell implementation and application removal are excluded from this edition. No network service, privileged helper or background agent is included.
+The Store build uses App Sandbox, user-selected file read/write and an app-scoped bookmark. Scan My Mac asks once for the Home folder (remembered; Forget Cache Access removes it), then reviews caches and Downloads. Cleanup is native Swift and allow-listed: caches are deleted after confirmation; old installers, deleted-app leftovers, Xcode Archives and AI models go to Trash. Other folder access is session-only. Application inventory is read-only; application removal and the shell cleanup script are excluded from this edition. No network service, privileged helper or background agent is included.
 
 The privacy policy now covers exported reports. The manifest declares no collected data/tracking and the audited reasons for preferences, displayed disk capacity and selected-folder timestamps. Store-specific listing copy, reviewer notes, public-page drafts and four screenshot candidates are prepared in `Packaging/AppStore/`.
 
@@ -21,7 +21,7 @@ The rebuilt universal local app and DMG are in `dist/AppStore/`. Package checks 
 ## Remaining blockers
 
 - Only an Apple Development signing identity was found with keychain access. Mac App Store distribution application/installer identities and an explicit App ID Store profile must be configured.
-- The owner confirmed that StorageFix is not registered in App Store Connect yet. Developer team, unused version/build, name availability and ownership still need confirmation. Current source is version 3.1, build 12, bundle ID `com.mehrdad.storagefix`.
+- The owner confirmed that StorageFix is not registered in App Store Connect yet. Developer team, unused version/build, name availability and ownership still need confirmation. Current source is version 3.1, build 13, bundle ID `com.mehrdad.storagefix`.
 - The owner confirmed there is no public website yet. Public support/privacy pages and real support/review contact details still need to be supplied. Draft page content is prepared but has not been published.
 - Owner approval is required for pricing/territories, age-rating, privacy/export-compliance and applicable account/trader declarations. Metadata null fields remain intentionally unfilled.
 - The distribution-signed app still needs installation/runtime validation, including native report saving, folder denial/revocation, external volumes and disposable-file Trash/restore in the sandbox. Current screenshots are native interface renders with synthetic sample content, not captures of a TestFlight-installed build.
@@ -44,3 +44,5 @@ October 17 (CI correction): the first CI workflow piped build and test output th
 UI/UX pass after a Gemini 4 Argon design consultation: capacity ring shows used space with amber/red pressure states, the clean-review notice folds into the journey card, a Review Queue pill stays visible while inspecting, map list bars use their chart colours, duplicate paths emphasise the folders that differ, Scan Comparison shows the folders that changed most, the folder picker suggests choosing Home, and a near-zero free-space change after Trash is explained. Rejected from that review: persistent folder bookmarks (conflicts with session-only access) and screenshot copy claiming "real disk space recovered".
 
 October 17 (cache cleanup): at the owner's request one-click cache cleanup returns to the Store edition as a native Swift engine (`Sources/StorageFixCore/NativeCleanup`). It needs a one-time Home folder grant per session, measures only allow-listed rebuildable caches, skips Apple system caches and symbolic links, blocks categories while their owner app runs, and permanently deletes the selected contents after the review sheet (owner decision: delete, not Trash). Quick Review includes caches once access is granted, and a "Review & Clean" card opens the confirmation in one click. The direct edition keeps the existing script-based cleanup. App Review risk to watch: cleaners are allowed, but the listing must not overstate results; the app reports measured free space only. Still to validate on a signed sandbox build: which ~/Library/Caches subfolders macOS lets a sandboxed app delete after a Home grant.
+
+October 19: Store listing, review notes, support draft, privacy draft and quick start refreshed for Scan My Mac, the remembered Home permission and the new Trash-only categories (installers, deleted-app leftovers). Build 13. Screenshots are still stale, and the signing, App Store Connect, public page and runtime blockers above are unchanged.

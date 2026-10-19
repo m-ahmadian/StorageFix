@@ -1,7 +1,5 @@
-# Privacy policy draft
-
 StorageFix Privacy Policy
-Updated October 17, 2026
+Updated October 19, 2026
 
 StorageFix processes file contents and metadata locally on your Mac to find
 matching files, show file sizes and dates, and review storage. File contents,
@@ -9,10 +7,17 @@ paths, hashes, application information and disk-space data are not uploaded.
 There are no accounts, advertising, tracking, analytics or third-party SDKs.
 StorageFix does not collect data from you over a network.
 
-The sandboxed Store edition reads folders you explicitly select. Folder access
-lasts for the app session; choosing a folder again is required after relaunch.
+The sandboxed Store edition reads folders you explicitly select. Review-folder
+access lasts for the app session. If you allow cache cleanup, StorageFix stores a
+local security-scoped bookmark for your Home folder so it does not ask again; it
+is kept only on this Mac and is removed when you choose Forget Cache Access.
 File scans never remove anything. Reviewed file removals move files to Finder
 Trash, where you can restore them until you empty Trash yourself.
+Cache cleanup permanently removes confirmed, rebuildable caches inside your Home
+folder. Old installers, leftovers of deleted apps, Xcode archives and local AI
+models are moved to Trash instead. To recognise leftovers, StorageFix reads the
+bundle identifiers of apps in the standard Applications folders on this Mac;
+that list is never stored or sent anywhere.
 Application inventory in the Store edition is read-only. Broad system-cache
 cleanup and app uninstalling are not part of that edition.
 
@@ -48,5 +53,3 @@ to the files under that folder; file-content matching stays on this Mac.
 For support, use the developer contact on StorageFix's App Store listing when
 published. A public copy of this policy and support contact must accompany that
 listing before submission. This local test build has not been published.
-
-Publisher action: replace the support reference with a public contact and host this policy before submission.
