@@ -9,6 +9,8 @@ struct StorageFixApp: App {
     private let folderAccess: FolderAccessSession
     @State private var showsPrivacy = false
     @StateObject private var workspace: WorkspaceViewModel
+    @StateObject private var freeSpace = FreeSpaceMonitor(read: FreeSpaceMonitor.volume(at: UserHome.real))
+    @AppStorage("storagefix.menuBar.visible") private var showsMenuBar = true
     init() {
         let script = Bundle.main.url(forResource: "storage-fix", withExtension: "sh")
             ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appending(path: "Scripts/storage-fix.sh")
@@ -25,7 +27,7 @@ struct StorageFixApp: App {
         return text
     }
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             WorkspaceView(viewModel: workspace).environment(\.folderAccessSession, folderAccess).sheet(isPresented: $showsPrivacy) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("Privacy & your files").font(.title2.bold())
@@ -37,6 +39,7 @@ struct StorageFixApp: App {
             .defaultSize(width: 1240, height: 860).windowResizability(.contentMinSize).windowStyle(.hiddenTitleBar)
             .commands {
                 CommandGroup(after: .appSettings) {
+                    Toggle("Show Free Space in Menu Bar", isOn: $showsMenuBar)
                     if DistributionMode.current == .appStore {
                         // Removes the remembered Home grant; cache cleanup asks again on next launch.
                         Button("Forget Cache Access") { folderAccess.forgetRemembered() }
@@ -49,5 +52,13 @@ struct StorageFixApp: App {
                     }
                 }
             }
+        MenuBarExtra(isInserted: $showsMenuBar) {
+            FreeSpaceMenuView(monitor: freeSpace, workspace: workspace) { showsMenuBar = false }
+                .environment(\.folderAccessSession, folderAccess)
+        } label: {
+            Image(systemName: freeSpace.isLow ? "externaldrive.badge.exclamationmark" : "internaldrive")
+            Text(freeSpace.title)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
