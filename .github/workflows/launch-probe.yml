@@ -1,29 +1,25 @@
-name: Launch probe
+name: Launch check
+# Launches the built app and fails if it is still busy after start-up (for example a SwiftUI redraw loop).
 on:
   push:
-    branches: ["claude/launch-probe", "claude/menubar-loop-fix"]
+    branches: [main, "claude/**"]
 jobs:
-  probe:
+  launch:
     runs-on: macos-26
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        ref: [HEAD]
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Build and sample direct edition
+      - name: Build and launch the direct edition, then measure idle CPU
         run: |
-          set +e
-          [ "${{ matrix.ref }}" != HEAD ] && git checkout -q ${{ matrix.ref }}
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build.log 2>&1 || echo "::error title=${{ matrix.ref }} build::failed"
+          SIGN_IDENTITY=- NOTARY_PROFILE= Scripts/package-app.sh > /tmp/build.log 2>&1 || { tail -30 /tmp/build.log; exit 1; }
           open dist/StorageFix.app; sleep 25
-          pid=$(pgrep -x StorageFix | head -1)
-          ps -o %cpu= -p "$pid" > /tmp/cpu1; sleep 5; ps -o %cpu= -p "$pid" > /tmp/cpu2
-          echo "::notice title=cpu ${{ matrix.ref }}::$(cat /tmp/cpu1) then $(cat /tmp/cpu2)"
+          pid=$(pgrep -x StorageFix | head -1 || true)
+          [ -n "$pid" ] || { echo "::error title=Launch check::StorageFix is not running after launch"; exit 1; }
+          sleep 5; cpu=$(ps -o %cpu= -p "$pid" | tr -d ' ')
+          echo "::notice title=Launch check::idle CPU ${cpu}%"
+          kill "$pid" || true
+          awk -v c="$cpu" 'BEGIN { exit (c > 50) }' || { echo "::error title=Launch check::StorageFix uses ${cpu}% CPU while idle"; exit 1; }
