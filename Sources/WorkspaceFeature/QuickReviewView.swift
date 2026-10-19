@@ -61,7 +61,7 @@ public struct QuickReviewView: View {
         HStack(spacing: DesignSystem.Spacing.large) {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
                 Text("Know what’s taking space.").font(.largeTitle.weight(.semibold))
-                Text(vm.reviewsApplications ? "Review the chosen folder, installed apps and rebuildable caches. You choose what happens next." : "Review a folder you choose, find duplicates and clean rebuildable caches. You choose what happens next.")
+                Text(vm.reviewsApplications ? "Review the chosen folder, installed apps and rebuildable caches. You choose what happens next." : "Scan caches, developer junk, old installers and leftovers of deleted apps, plus your Downloads. You choose what happens next.")
                     .font(.callout).foregroundStyle(DesignSystem.Colors.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                 Toggle("Compare file contents for duplicates (optional)", isOn: Binding(

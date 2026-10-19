@@ -10,7 +10,7 @@ struct CleanupHeaderView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.xSmall) {
                 Text("Cleanup")
                     .font(.system(size: 30, weight: .semibold))
-                Text("Review caches and optional data before permanently removing selected files.")
+                Text("Review every category before cleaning. Caches are deleted; installers and leftovers go to the Trash.")
                     .foregroundStyle(DesignSystem.Colors.secondaryText)
             }
             Spacer()
